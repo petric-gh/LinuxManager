@@ -21,6 +21,5 @@ StartupNotify=true
 StartupWMClass=TaskManager
 DESKTOP_EOF
 if command -v kbuildsycoca6 >/dev/null 2>&1; then kbuildsycoca6 --noincremental >/dev/null 2>&1 || true; fi
-printf 'Installed Task Manager. Open it from the KDE application launcher.\n'
-printf 'To pin it: launch it, right-click its taskbar icon, choose Pin to Task Manager.\n'
-printf 'To remove it later, run: %s/uninstall-app.sh\n' "$HERE"
+printf 'Installed LinuxManager. Open it from the application launcher.\n'
+printf 'To remove it later, run %s/uninstall-app.sh\n' "$HERE"
