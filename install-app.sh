@@ -7,7 +7,6 @@ BINDIR="$HOME/.local/bin"
 mkdir -p "$APPDIR" "$DESKTOPDIR" "$ICONDIR" "$BINDIR"
 install -m 755 "$HERE/taskmgr" "$APPDIR/taskmgr"
 ln -sf "$APPDIR/taskmgr" "$BINDIR/taskmgr-linux"
-install -m 644 "$HERE/wintask-linux.svg" "$ICONDIR/wintask-linux.svg"
 cat > "$DESKTOPDIR/wintask-linux.desktop" <<DESKTOP_EOF
 [Desktop Entry]
 Type=Application
