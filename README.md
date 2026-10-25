@@ -7,7 +7,7 @@ An **extremely compact** native C/Xlib system monitor for Linux desktops running
 Compared to the newer 4 MB Windows Task Manager, **LinuxManager** aims to deliver an even better design and essential system-management features in a dramatically smaller package, **while also being completely open-source**.
 ## Install
 
-You can run **LinuxManager** directly by downloading the latest precompiled executable from `Releases`, or build and install it from source by following the instructions below.
+You can run **LinuxManager** directly by **downloading the latest precompiled executable** from `Releases`, or build and install it from source by following the instructions below.
 
 1. Download the project as a `.zip` file.
 2. Extract the files into your desired location.
@@ -47,10 +47,10 @@ The current build has an executable size of approximately **77 KB** and has used
 
 ## Technical Details
 
-This section covers additional details that aren't mentioned elsewhere and might otherwise be difficult to discover **on your own**.
+This section covers additional details that **aren't mentioned elsewhere** and might otherwise be difficult to discover **on your own**.
 
-- **Appearance:** *bottom-left button* switches between **light** and **dark** palettes and saves the selection in `~/.config/wintask-linux/theme`.
-- **Processes:** any sampled value below 0.001%, including zero, displays as `<0.001%`.
+- **Appearance:** bottom-left button switches between **light** and **dark** palettes and saves the selection in `~/.config/wintask-linux/theme`.
+- **Processes:** any sampled value below `0.001%`, including zero, displays as `<0.001%`.
 - **Context menus:** menus are generated from the current item state. Right-click a live process for end/force-stop, state-aware suspend or resume, priority changes, executable folder/path, web search, copy PID (needs `xclip`).
 - **App history:** session-only average CPU and peak RSS by process name. Rows support click selection, Up/Down keyboard selection, and independent wheel scrolling.
 - **Startup apps:** XDG autostart entries, user-owned enable/disable, and per-user `Hidden=true` overrides for system-wide entries (without editing `/etc` or `/usr/share`). Existing user overrides are backed up and restored when toggling.
