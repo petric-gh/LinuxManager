@@ -261,7 +261,7 @@ static void draw_action_banner(void){
  text(bx+26,by+23,processing?"PROCESSING…":(failed?"ACTION FAILED":"ACTION COMPLETE"),fg);
 }
 static void draw_nav(void){
- fill(0,0,ww,hh,0xF4F6FA);fill(0,0,ww,62,WHITE);fill(0,0,5,62,BLUE);text(24,39,"LinuxManager",INK);text(ww-190,37,"petric-gh",MUTED);ln(0,61,ww,61,LINE);
+ fill(0,0,ww,hh,0xF4F6FA);fill(0,0,ww,62,WHITE);fill(0,0,5,62,BLUE);text(24,39,"LinuxManager",INK);text(ww-120,37,"petric-gh",MUTED);ln(0,61,ww,61,LINE);
  fill(0,62,NAVW,hh-86,0xEDF1F7);
  for(int i=0;i<PAGE_COUNT;i++){int y=86+i*38;if(page==i){fill(9,y-23,NAVW-18,33,0xDFE8FF);fill(9,y-23,4,33,BLUE);}text(28,y,pages[i],page==i?BLUE:INK);}
  int ty=hh-60;fill(12,ty,NAVW-24,28,dark_mode?0x34445A:0xFFFFFF);stroke(12,ty,NAVW-24,28,dark_mode?0x50617A:LINE);fill(23,ty+9,10,10,dark_mode?0xFFC266:BLUE);text(42,ty+19,dark_mode?"Light mode":"Dark mode",dark_mode?0xFFC266:BLUE);
