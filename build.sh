@@ -1,4 +1,3 @@
-#!/bin/sh
 set -eu
 cd "$(dirname "$0")"
 command -v cc >/dev/null 2>&1 || { echo 'Missing C compiler (cc).' >&2; exit 1; }
