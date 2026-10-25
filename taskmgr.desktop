@@ -1,8 +1,7 @@
 [Desktop Entry]
-Version=1.0
 Type=Application
-Name=Task Manager
-GenericName=System Monitor
+Name=LinuxManager
+GenericName=Task Manager
 Comment=Monitor processes, CPU, memory, users and services
 Exec=taskmgr-linux
 TryExec=taskmgr-linux
