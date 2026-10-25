@@ -2,7 +2,7 @@
 
 An **extremely compact** native C/Xlib system monitor for Linux desktops running X11 or XWayland. It is designed to be **smaller and lighter than the original 1996 Windows Task Manager**, with an executable size of approximately **77 KB** and a RAM footprint of around **8 MB** under testing.
 
-Compared to the newer 4 MB Windows Task Manager, LinuxManager aims to deliver an even better design and essential system-management features in a dramatically smaller package, **while also being completely open-source**.
+Compared to the newer 4 MB Windows Task Manager, **LinuxManager** aims to deliver an even better design and essential system-management features in a dramatically smaller package, **while also being completely open-source**.
 ## Install
 
 You can run **LinuxManager** directly by downloading the latest precompiled executable from `Releases`, or build and install it from source by following the instructions below.
@@ -21,7 +21,10 @@ You can run **LinuxManager** directly by downloading the latest precompiled exec
 
 ## Build
 
+Run the following command inside your **LinuxManager** project folder to compile the source code and create the `taskmgr` executable. This builds the application but does not install it on your system.
+
 ```sh
+chmod +x build.sh
 ./build.sh
 ```
 
@@ -36,7 +39,7 @@ The executable is dynamically linked to *X11*, *Xft*, *XRender*, *libc* and *req
 - **Test Environment:** *Fedora Linux* with *KDE Plasma*, running on X11/XWayland-compatible infrastructure.
 - **Comparison:** File sizes and memory measurements are compared separately, since executable size on disk does not represent RAM usage.
 
-The current build has an executable size of approximately **77 KB** and has used around **8 MB of RAM** in a previous test. Actual memory usage varies depending on the system, libraries, desktop environment, and workload. These figures are measured results, not guaranteed minimums.
+The current build has an executable size of approximately **77 KB** and has used around **8 MB of RAM** in a previous test. Actual memory usage varies *depending on the system*, *ibraries*, *desktop environment*, and *workload*. These figures are measured results, **not guaranteed values**!
 
 ## Pages and working features
 
