@@ -45,7 +45,7 @@ The executable is dynamically linked to *X11*, *Xft*, *XRender*, *libc* and *req
 
 The current build has an executable size of approximately **77 KB** and has used around **8 MB of RAM** in a previous test. Actual memory usage varies *depending on the system*, *libraries*, *desktop environment*, and *workload*. These figures are measured results, **not guaranteed values**!
 
-## Warning
+## WARNING
 
 **The source code may occasionally be ahead of the latest precompiled release.** This means the source and precompiled versions may differ in features, fixes, or behavior. For the latest changes, consider building **LinuxManager** from source.
 
