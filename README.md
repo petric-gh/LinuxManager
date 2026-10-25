@@ -8,6 +8,7 @@ Compared to the newer 4 MB Windows Task Manager, **LinuxManager** aims to delive
 ## Install
 
 You can run **LinuxManager** directly by **downloading the latest precompiled executable** from `Releases`, or build and install it from source by following the instructions below.
+<br>
 **This installer only works with *Bash*.** Make sure to run it in *Bash* or add `bash` at the beginning of the command.
 
 1. Download the project as a `.zip` file.
