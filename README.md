@@ -1,4 +1,4 @@
-# `LinuxManager` - *The Easiest Task Manager for Linux*
+# `LinuxManager` - The Easiest Task Manager for Linux
 
 An **extremely compact** native C/Xlib system monitor for Linux desktops running X11 or XWayland. It is designed to be **smaller and lighter than the original 1996 Windows Task Manager**, with an executable size of approximately **77 KB** and a RAM footprint of around **8 MB** under testing.
 <br>
