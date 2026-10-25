@@ -10,14 +10,12 @@ ln -sf "$APPDIR/taskmgr" "$BINDIR/taskmgr-linux"
 install -m 644 "$HERE/wintask-linux.svg" "$ICONDIR/wintask-linux.svg"
 cat > "$DESKTOPDIR/wintask-linux.desktop" <<DESKTOP_EOF
 [Desktop Entry]
-Version=1.0
 Type=Application
-Name=Task Manager
-GenericName=System Monitor
-Comment=Monitor processes, CPU, memory, users and services
+Name=LinuxManager
+GenericName=Task Manager
+Comment=The Easiest Task Manager for Linux
 Exec=$APPDIR/taskmgr
 TryExec=$APPDIR/taskmgr
-Icon=wintask-linux
 Terminal=false
 Categories=System;Monitor;Utility;
 StartupNotify=true
