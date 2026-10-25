@@ -7,4 +7,4 @@ rm -f "$APPDIR/taskmgr" "$DESKTOPDIR/wintask-linux.desktop" "$BINDIR/taskmgr-lin
 rm -f "$ICONDIR/wintask-linux.svg"
 rmdir "$APPDIR" 2>/dev/null || true
 if command -v kbuildsycoca6 >/dev/null 2>&1; then kbuildsycoca6 --noincremental >/dev/null 2>&1 || true; fi
-printf 'LinuxManager has been uninstalled.\n'
+printf 'LinuxManager has been uninstalled successfully.\n'
