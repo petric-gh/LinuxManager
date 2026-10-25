@@ -1,7 +1,8 @@
-# Task Manager for Linux
+# LinuxManager - *The Easiest Task Manager for Linux*
 
-A compact native C/Xlib system monitor for Linux desktops running X11 or XWayland. The interface now uses a cleaner sans-serif font, clearer spacing, a left navigation rail, responsive information panels, live tables, and context menus.
+An **extremely compact** native C/Xlib system monitor for Linux desktops running X11 or XWayland. It is designed to be **smaller and lighter than the original 1996 Windows Task Manager**, with an executable size of approximately **77 KB** and a RAM footprint of around **8 MB** under testing.
 
+Compared to the newer 4 MB Windows Task Manager, LinuxManager aims to deliver an even better design and essential system-management features in a dramatically smaller package, **while also being completely open-source**.
 ## Install
 
 1. Extract this folder in Dolphin.
