@@ -5,24 +5,38 @@ An **extremely compact** native C/Xlib system monitor for Linux desktops running
 Compared to the newer 4 MB Windows Task Manager, LinuxManager aims to deliver an even better design and essential system-management features in a dramatically smaller package, **while also being completely open-source**.
 ## Install
 
-1. Extract this folder in Dolphin.
-2. Right-click `install-app.sh` → **Properties → Permissions** → enable **Is executable** if needed.
-3. Double-click `install-app.sh` and choose **Execute** when KDE asks.
-4. Search for **Task Manager** in the application launcher. Pin its running icon to the taskbar if desired.
+You can run **LinuxManager** directly by downloading the latest precompiled executable from `Releases`, or build and install it from source by following the instructions below.
 
-## Uninstall
+1. Download the project as a `.zip` file.
+2. Extract the files into your desired location.
+3. Install a *C compiler*, *make*, and the *required X11/Xft development libraries* for your distribution.
+4. Right-click `install-app.sh` → **Properties → Permissions** → enable **Is executable** if needed.
+5. Double-click `install-app.sh` and choose **Execute** when asked.
+6. Search for **Task Manager** in the application launcher and run it.
 
-Double-click `uninstall-app.sh` (mark it executable if needed). It removes the installed binary, launcher entry, symlink, and icon. It does not delete personal files or stop/change system services.
+## Uninstall (When Installed from Source)
+
+1. Right-click `uninstall-app.sh` → **Properties → Permissions** → enable **Is executable** if needed.
+2. Double-click `uninstall-app.sh` and choose **Execute** when asked. It removes the installed *binary*, *launcher entry* etc. from your system. It does not delete personal files or stop/change system services.
 
 ## Build
-
-Requires a C compiler, X11 development headers, and libX11 at build time:
 
 ```sh
 ./build.sh
 ```
 
-The executable is dynamically linked to X11, Xft, XRender, and libc and requires X11/XWayland plus those runtime libraries at runtime. It is not a Python app. The build script checks that the executable is below 1,000,000 bytes.
+The executable is dynamically linked to *X11*, *Xft*, *XRender*, *libc* and *requires X11/XWayland* plus those runtime libraries at runtime. The build script checks that the executable is below 1,000,000 bytes.
+
+## Benchmarking & Testing
+
+**LinuxManager**'s executable size and memory usage are measured by testing the compiled application in a *live desktop environment*.
+
+- **Executable Size:** Measured in bytes using the compiled `taskmgr` binary.
+- **RAM Usage:** Measured while the application is running, using its resident memory (RSS) and proportional set size (PSS).
+- **Test Environment:** *Fedora Linux* with *KDE Plasma*, running on X11/XWayland-compatible infrastructure.
+- **Comparison:** File sizes and memory measurements are compared separately, since executable size on disk does not represent RAM usage.
+
+The current build has an executable size of approximately **77 KB** and has used around **8 MB of RAM** in a previous test. Actual memory usage varies depending on the system, libraries, desktop environment, and workload. These figures are measured results, not guaranteed minimums.
 
 ## Pages and working features
 
