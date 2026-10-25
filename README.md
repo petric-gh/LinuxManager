@@ -65,6 +65,6 @@ This section covers additional details that **aren't mentioned elsewhere** and m
 - **Limitations**: Linux does not provide one universal interface for all GPU utilization/VRAM/temperature values; support depends on the GPU driver. Process access and service actions are limited by Linux permissions.
 - **Information**: the GUI is an X11/XWayland client rather than a native Wayland client. Action feedback appears in multiple places: an orange processing badge in the top bar, an amber footer status, and an amber highlight on the active row where applicable. Instantaneous actions keep the processing indicator visible for at least 850 ms; afterward a green completion or red failure badge and message remain visible briefly.
 
-## Protected process termination
+## Protected Process Termination
 
 For **End task** and **Force stop**, the app first sends the signal with the current user permissions. If Linux reports `EPERM`, it requests elevated authorization for only that PID and signal through `pkexec` (with `sudo -A` as a fallback). **The application itself is not run as root.** A PolicyKit authentication agent or configured sudo askpass is required for the prompt to work. A process may still be impossible to stop if it has exited, the request is not authorized, or it is stuck in an uninterruptible kernel wait.
