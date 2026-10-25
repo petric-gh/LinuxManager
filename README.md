@@ -60,7 +60,7 @@ This section covers additional details that **aren't mentioned elsewhere** and m
 - **GPU:** detected DRM graphics devices and PCI vendor IDs where exposed.
 - **System info:** distribution, kernel, architecture, hostname, CPU model, online CPU count, page size, uptime, process count, RAM, root filesystem capacity, boot ID, shell, UID, home, display server, and process limit.
 - **CPU details:** per-logical-CPU kernel tick counters with separate scrolling.
-- **Memory details:** selected physical-memory, swap, and virtual-memory counters from `/proc/meminfo`, with labels and values clipped within their panel bounds.
+- **Memory details:** selected physical-memory, swap, and virtual-memory counters from `/proc/meminfo`.
 - **Network:** per-interface received/transmitted bytes and packet counts.
 - **Limitations**: Linux does not provide one universal interface for all GPU utilization/VRAM/temperature values; support depends on the GPU driver. Process access and service actions are limited by Linux permissions.
 - **Information**: the GUI is an X11/XWayland client rather than a native Wayland client. Action feedback appears in multiple places: an orange processing badge in the top bar, an amber footer status, and an amber highlight on the active row where applicable. Instantaneous actions keep the processing indicator visible for at least 850 ms; afterward a green completion or red failure badge and message remain visible briefly.
