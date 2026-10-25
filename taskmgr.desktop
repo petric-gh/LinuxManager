@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Task Manager
+GenericName=System Monitor
+Comment=Monitor processes, CPU, memory, users and services
+Exec=taskmgr-linux
+TryExec=taskmgr-linux
+Icon=wintask-linux
+Terminal=false
+Categories=System;Monitor;Utility;
+StartupNotify=true
+StartupWMClass=TaskManager
