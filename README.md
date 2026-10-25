@@ -27,7 +27,7 @@ Run the following command inside your **LinuxManager** project folder to compile
 
 ```sh
 chmod +x build.sh
-./build.sh
+bash ./build.sh
 ```
 
 The executable is dynamically linked to *X11*, *Xft*, *XRender*, *libc* and *requires X11/XWayland* plus those runtime libraries at runtime. The build script checks that the executable is below 1,000,000 bytes.
