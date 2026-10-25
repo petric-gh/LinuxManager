@@ -502,7 +502,7 @@ static void do_menu(int y){
  else if(action==MA_PROC_PROPERTIES){begin_action("reading selected process properties");char b[256],cpu_text[32];format_cpu(p->cpu,cpu_text,sizeof cpu_text);snprintf(b,sizeof b,"PID %d | %.75s | user %.40s | state %c | CPU %s | memory %.1f MB",p->pid,p->name,p->user,p->state,cpu_text,p->rss/1048576.0);setstatus(b);}
 }
 static void add_history(void){unsigned long long u,t;double m=read_mem_percent(&u,&t);cpu_hist[histpos]=read_cpu_percent();mem_hist[histpos]=m;histpos=(histpos+1)%120;if(histcount<120)histcount++;}
-int main(void){setlocale(LC_CTYPE, "");load_theme();D=XOpenDisplay(NULL);if(!D){fprintf(stderr,"Task Manager requires an X11 display or XWayland.\n");return 1;}S=DefaultScreen(D);W=XCreateSimpleWindow(D,RootWindow(D,S),80,60,SW,SH,1,0xB9C2D0,BG);XStoreName(D,W,"Task Manager");
+int main(void){setlocale(LC_CTYPE, "");load_theme();D=XOpenDisplay(NULL);if(!D){fprintf(stderr,"Task Manager requires an X11 display or XWayland.\n");return 1;}S=DefaultScreen(D);W=XCreateSimpleWindow(D,RootWindow(D,S),80,60,SW,SH,1,0xB9C2D0,BG);XStoreName(D,W,"LinuxManager");
  XClassHint class_hint; class_hint.res_name=(char*)"taskmgr"; class_hint.res_class=(char*)"TaskManager"; XSetClassHint(D,W,&class_hint);
  XSizeHints size_hints; memset(&size_hints,0,sizeof(size_hints)); size_hints.flags=PMinSize; size_hints.min_width=1000; size_hints.min_height=620; XSetWMNormalHints(D,W,&size_hints);
  Atom net_pid=XInternAtom(D,"_NET_WM_PID",False); unsigned long mypid=(unsigned long)getpid(); XChangeProperty(D,W,net_pid,XA_CARDINAL,32,PropModeReplace,(unsigned char*)&mypid,1);
