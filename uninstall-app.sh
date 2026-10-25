@@ -1,4 +1,3 @@
-#!/bin/sh
 set -eu
 APPDIR="$HOME/.local/opt/wintask-linux"
 BINDIR="$HOME/.local/bin"
