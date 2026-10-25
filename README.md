@@ -50,8 +50,8 @@ The current build has an executable size of approximately **77 KB** and has used
 This section covers additional details that **aren't mentioned elsewhere** and might otherwise be difficult to discover **on your own**.
 
 - **Appearance:** bottom-left button switches between **light** and **dark** palettes and saves the selection in `~/.config/wintask-linux/theme`.
-- **Processes:** any sampled value below `0.001%`, including zero, displays as `<0.001%`.
-- **Context menus:** menus are generated from the current item state. Right-click a live process for end/force-stop, state-aware suspend or resume, priority changes, executable folder/path, web search, copy PID (needs `xclip`).
+- **Processes:** any sampled value below `0.001%`, **including zero**, displays as `<0.001%`.
+- **Context menus:** menus are generated from the current item state. Right-click a live process for end/force-stop, state-aware suspend or resume, priority changes, executable folder/path, web search, copy PID (requires `xclip`).
 - **App history:** session-only average CPU and peak RSS by process name. Rows support click selection, Up/Down keyboard selection, and independent wheel scrolling.
 - **Startup apps:** XDG autostart entries, user-owned enable/disable, and per-user `Hidden=true` overrides for system-wide entries (without editing `/etc` or `/usr/share`). Existing user overrides are backed up and restored when toggling.
 - **Details:** local account names, UIDs, home directories, shells, selected process's parent PID, state, CPU estimate, resident and virtual memory, thread count, executable path, and command line.
