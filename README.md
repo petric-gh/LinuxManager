@@ -29,6 +29,7 @@ chmod +x build.sh
 ```
 
 The executable is dynamically linked to *X11*, *Xft*, *XRender*, *libc* and *requires X11/XWayland* plus those runtime libraries at runtime. The build script checks that the executable is below 1,000,000 bytes.
+<sub>**Note:** When compiled from source, the executable is approximately **100 KB** in size.</sub>
 
 ## Benchmarking & Testing
 
