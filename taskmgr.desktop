@@ -2,7 +2,7 @@
 Type=Application
 Name=LinuxManager
 GenericName=Task Manager
-Comment=Monitor processes, CPU, memory, users and services
+Comment=The Easiest Task Manager for Linux
 Exec=taskmgr-linux
 TryExec=taskmgr-linux
 Terminal=false
