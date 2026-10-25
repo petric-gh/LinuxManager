@@ -3,7 +3,7 @@
 An **extremely compact** native C/Xlib system monitor for Linux desktops running X11 or XWayland. It is designed to be **smaller and lighter than the original 1996 Windows Task Manager**, with an executable size of approximately **77 KB** and a RAM footprint of around **8 MB** under testing.
 <br><br>
 <sub>For comparison, this entire `README` is about **a quarter** of the size of the **compiled executable**; *and it's just text*!</sub>
-
+<br>
 Compared to the newer 4 MB Windows Task Manager, **LinuxManager** aims to deliver an even better design and essential system-management features in a dramatically smaller package, **while also being completely open-source**.
 ## Install
 
