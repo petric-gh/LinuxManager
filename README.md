@@ -43,7 +43,7 @@ The executable is dynamically linked to *X11*, *Xft*, *XRender*, *libc* and *req
 - **Test Environment:** *Fedora Linux* with *KDE Plasma*, running on X11/XWayland-compatible infrastructure.
 - **Comparison:** File sizes and memory measurements are compared separately, since executable size on disk does not represent RAM usage.
 
-The current build has an executable size of approximately **77 KB** and has used around **8 MB of RAM** in a previous test. Actual memory usage varies *depending on the system*, *ibraries*, *desktop environment*, and *workload*. These figures are measured results, **not guaranteed values**!
+The current build has an executable size of approximately **77 KB** and has used around **8 MB of RAM** in a previous test. Actual memory usage varies *depending on the system*, *libraries*, *desktop environment*, and *workload*. These figures are measured results, **not guaranteed values**!
 
 ## Pages and working features
 
