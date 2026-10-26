@@ -59,6 +59,19 @@ Running the commands below in the folder containing `update-installed.sh` will u
 
 The first build has an executable size of approximately **77 KB** and has used around **8 MB of RAM** in a previous test. Actual memory usage varies *depending on the system*, *libraries*, *desktop environment*, and *workload*. These figures are measured results, **not guaranteed values**!
 
+## Process Statuses Implemented
+
+**All available labels** for the `Status` column are listed below. This list was officially documented in [Release v1.3](https://github.com/petric-gh/LinuxManager/releases/tag/v1.3), although the feature has been available since the first `Pre-release`.
+
+| Status shown | Linux state | Meaning |
+|---------|-------------|-------------|
+| Running | R | Running or ready to run |
+| Sleeping | S | Waiting interruptibly for an event |
+| Uninterruptible | D | Waiting in uninterruptible sleep, commonly for I/O |
+| Stopped | T | Stopped, for example by a job-control signal |
+| Zombie | Z | Finished execution but awaiting collection by its parent |
+| Background | Other states | Any state not explicitly mapped above |
+
 ## Process Installation Source
 
 The table below lists **all currently available** labels for the `Source` column, introduced in [`Release v1.2`](https://github.com/petric-gh/LinuxManager/releases/tag/v1.2).
