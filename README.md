@@ -38,7 +38,7 @@ The executable is dynamically linked to *X11*, *Xft*, *XRender*, *libc* and *req
 
 ## Update
 
-Since `Release v1.1`, updating **LinuxManager** is done through `update-installed.sh`, following the guide below:
+Since [`Release v1.1`](https://github.com/petric-gh/LinuxManager/releases/tag/v1.1), updating **LinuxManager** is done through `update-installed.sh`, following the guide below:
 
 ```sh
 chmod +x update-installed.sh
