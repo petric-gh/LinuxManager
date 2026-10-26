@@ -2,12 +2,12 @@
 
 An **extremely compact** native C/Xlib system monitor for Linux desktops running X11 or XWayland. It is designed to be **smaller and lighter than the original 1996 Windows Task Manager**, with an executable size of approximately **77 KB** and a RAM footprint of around **8 MB** under testing.
 <br>
-<sub>For comparison, this entire `README.md` is about **a quarter** of the size of the **compiled executable**; *and it's just text*!</sub>
+<sub>For comparison, this entire `README.md` is about **a quarter** of the size of the **first compiled executable**; *and it's just text*!</sub>
 
 Compared to the newer 4 MB Windows Task Manager, **LinuxManager** aims to deliver an even better design and essential system-management features in a dramatically smaller package, **while also being completely open-source**.
 ## Install
 
-You can run **LinuxManager** directly by **downloading the latest precompiled executable** from `Releases`, or build and install it from source by following the instructions below.
+You can run **LinuxManager** directly by **downloading the latest precompiled executable** from [`Releases`](https://github.com/petric-gh/LinuxManager/releases), or build and install it from source by following the instructions below.
 <br>
 **This installer only works with *Bash*.** Make sure to run it in *Bash* or add `bash` at the beginning of the command.
 
@@ -59,11 +59,20 @@ Running the commands below in the folder containing `update-installed.sh` will u
 
 The first build has an executable size of approximately **77 KB** and has used around **8 MB of RAM** in a previous test. Actual memory usage varies *depending on the system*, *libraries*, *desktop environment*, and *workload*. These figures are measured results, **not guaranteed values**!
 
-| Feature | Description | Status |
-|---------|-------------|--------|
-| GPU Details | Live GPU monitoring |
-| Process Source | Estimates where applications come from |
-| Network Monitoring | Displays receive and send speeds |
+## Process Installation Source
+
+The table below lists **all currently available** labels for the `Source` column, introduced in [`Release v1.2`](https://github.com/petric-gh/LinuxManager/releases/tag/v1.2).
+
+| Source label | What it indicates |
+|---------|-------------|
+| Flatpak | Flatpak-style executable path |
+| Snap | Snap executable path |
+| AppImage | AppImage-style path |
+| Steam/Proton | Steam or Proton-related path |
+| Nix | Nix store path |
+| System package | Common system executable directories |
+| Manual / local | Common local or manually installed paths |
+| Unknown | Source could not be determined |
 
 ## WARNING
 
