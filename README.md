@@ -36,6 +36,18 @@ The executable is dynamically linked to *X11*, *Xft*, *XRender*, *libc* and *req
 <br>
 <sub>**Note:** When compiled from source, the executable is approximately **100 KB** in size.</sub>
 
+## Updating
+
+Since `Release v1.1`, updating **LinuxManager** is done through `update-installed.sh`, following the guide below:
+
+```sh
+chmod +x update-installed.sh
+bash ./update-installed.sh
+```
+Running the commands below in the folder containing `update-installed.sh` will update only the installed version of **LinuxManager**. **Any other compiled or precompiled copies, as well as the source code, will need to be updated or downloaded separately.**
+
+**You don't need the full source code to use this updater.** Only `update-installed.sh` and an internet connection are required, as the script downloads the latest version from the `main` branch on GitHub.
+
 ## Benchmarking & Testing
 
 **LinuxManager**'s executable size and memory usage are measured by testing the compiled application in a *live desktop environment*.
