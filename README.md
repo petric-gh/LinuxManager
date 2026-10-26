@@ -36,7 +36,7 @@ The executable is dynamically linked to *X11*, *Xft*, *XRender*, *libc* and *req
 <br>
 <sub>**Note:** When compiled from source, the executable is approximately **100 KB** in size.</sub>
 
-## Updating
+## Update
 
 Since `Release v1.1`, updating **LinuxManager** is done through `update-installed.sh`, following the guide below:
 
