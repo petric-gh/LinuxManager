@@ -52,7 +52,6 @@ if [[ ! -f "${EXTRACT_DIR}/taskmgr" || ! -x "${EXTRACT_DIR}/taskmgr" ]]; then
 fi
 
 install -m 755 "${EXTRACT_DIR}/taskmgr" "$NEW_BINARY"
-# Stage beside the installed executable so the final rename is atomic.
 install -m 755 "$NEW_BINARY" "$APP_TEMP"
 mv -f -- "$APP_TEMP" "$INSTALLED"
 
