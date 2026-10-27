@@ -61,23 +61,24 @@ The first build has an executable size of approximately **77 KB** and has used a
 
 ## Process Statuses Implemented
 
-**All available labels** for the `Status` column are listed below. This list was officially documented in [`Release v1.3`](https://github.com/petric-gh/LinuxManager/releases/tag/v1.3), although the feature has been available since the [`Pre-release v1.0`](https://github.com/petric-gh/LinuxManager/releases/tag/v1.0).
+**All available labels** for the `Status` column are listed below. This list was officially documented in [`Release v1.3`](https://github.com/petric-gh/LinuxManager/releases/tag/v1.3), although a *partial version* of this feature has been available since [`Pre-release v1.0`](https://github.com/petric-gh/LinuxManager/releases/tag/v1.0). **Colored versions** of the labels and the `Idle` status were *both* introduced in [`Release v2.0`](https://github.com/petric-gh/LinuxManager/releases/tag/v2.0).
 
-| Status shown | Linux state | Meaning |
-|---------|-------------|-------------|
-| Running | R | Running or ready to run |
-| Sleeping | S | Waiting interruptibly for an event |
-| Uninterruptible | D | Waiting in uninterruptible sleep, commonly for I/O |
-| Stopped | T | Stopped, for example by a job-control signal |
-| Zombie | Z | Finished execution but awaiting collection by its parent |
-| Background | Other states | Any state not explicitly mapped above |
+| Status shown | Linux state | Meaning | Light Theme | Dark Theme |
+|--------------|-------------|---------|-------------|------------|
+| Running | R | Running or ready to run | #16845B | #6CCB8E |
+| Sleeping | S | Waiting interruptibly for an event | #687386 | #A0A0A0 |
+| Uninterruptible | D | Waiting in uninterruptible sleep, commonly for I/O | #B7791F | #F5C451 |
+| Stopped | T | Stopped, for example by a job-control signal | #B7791F | #F5C451 |
+| Zombie | Z | Finished execution but awaiting collection by its parent | #C0392B | #FF7777 |
+| Idle | I | Idle kernel thread, not currently performing work | #0078D4 | #60CDFF |
+| Background | Other states | Any state not explicitly mapped above | #687386 | #A0A0A0 |
 
 ## Process Installation Source
 
 The table below lists **all currently available** labels for the `Source` column, introduced in [`Release v1.2`](https://github.com/petric-gh/LinuxManager/releases/tag/v1.2).
 
 | Source label | What it indicates |
-|---------|-------------|
+|--------------|-------------------|
 | Flatpak | Flatpak-style executable path |
 | Snap | Snap executable path |
 | AppImage | AppImage-style path |
