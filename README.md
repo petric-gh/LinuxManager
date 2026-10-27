@@ -61,7 +61,7 @@ The first build has an executable size of approximately **77 KB** and has used a
 
 ## Process Statuses Implemented
 
-**All available labels** for the `Status` column are listed below. This list was officially documented in [`Release v1.3`](https://github.com/petric-gh/LinuxManager/releases/tag/v1.3), although the feature has been available since the first `Pre-release`.
+**All available labels** for the `Status` column are listed below. This list was officially documented in [`Release v1.3`](https://github.com/petric-gh/LinuxManager/releases/tag/v1.3), although the feature has been available since the [`Pre-release v1.0`](https://github.com/petric-gh/LinuxManager/releases/tag/v1.0).
 
 | Status shown | Linux state | Meaning |
 |---------|-------------|-------------|
