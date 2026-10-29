@@ -1,6 +1,8 @@
 # `LinuxManager` — A GUI Alternative to the Console
 
-[![XERJ Corpus Hub contributor](https://hub.xerj.org/contributors/petric-gh/badge.svg)](https://hub.xerj.org/contributors/petric-gh) [![license](https://img.shields.io/badge/license-GPLv3-green.svg?style=flat)](https://github.com/petric-gh/LinuxManager?tab=GPL-3.0-1-ov-file)
+[![Made with C#](https://img.shields.io/badge/Made%20with-C%23-0078D4?logo=csharp&logoColor=white)](https://en.wikipedia.org/wiki/C_(programming_language)) [![license](https://img.shields.io/badge/license-GPLv3-green.svg?style=flat)](https://github.com/petric-gh/LinuxManager?tab=GPL-3.0-1-ov-file)
+<br>
+[![XERJ Corpus Hub contributor](https://hub.xerj.org/contributors/petric-gh/badge.svg)](https://hub.xerj.org/contributors/petric-gh)
 
 
 An **extremely compact** native C/Xlib system monitor for Linux desktops running X11 or XWayland. It is designed to be **smaller and lighter than the original 1996 Windows Task Manager**, with an executable size of approximately **77 KB** and a RAM footprint of around **8 MB** under testing.
