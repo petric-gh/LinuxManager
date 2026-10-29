@@ -1,5 +1,7 @@
 # `LinuxManager` — A GUI Alternative to the Console
 
+[![XERJ Corpus Hub contributor](https://hub.xerj.org/contributors/petric-gh/badge.svg)](https://hub.xerj.org/contributors/petric-gh)
+
 An **extremely compact** native C/Xlib system monitor for Linux desktops running X11 or XWayland. It is designed to be **smaller and lighter than the original 1996 Windows Task Manager**, with an executable size of approximately **77 KB** and a RAM footprint of around **8 MB** under testing.
 <br>
 <sub>For comparison, this entire `README.md` is about **a quarter** of the size of the **first compiled executable**; *and it's just text*!</sub>
