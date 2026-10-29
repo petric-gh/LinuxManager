@@ -61,7 +61,7 @@ extern void XRenderFreePicture(Display *, TaskPicture);
 #define WHITE 0xFFFFFF
 #define INK 0x202938
 #define MUTED 0x687386
-#define BLUE 0x0078D4
+#define BLUE 0x005FB7
 #define PALE 0xE7EEFF
 #define LINE 0xE1E6EF
 #define GREEN 0x16845B
@@ -77,7 +77,7 @@ typedef struct { char name[256],path[PATH_MAX]; int disabled,user_owned,hidden_o
 static Display *D; static int S; static Window W; static GC G; static XFontStruct *F; static XFontSet FS; static XftDraw *XD; static XftFont *XF,*XFUser; static Atom WM_DELETE;
 static int ww=SW,hh=SH,page=0,selected=-1,scroll=0,menu=0,menu_x=0,menu_y=0,sort_col=0,sort_desc=0,search_focus=0,run_dialog=0,run_focus=0;
 static int dark_mode=1, history_scroll=0, cpu_scroll=0, disk_scroll=0, network_scroll=0, selected_appstat=-1, memory_scroll=0;
-static int disk_panel_bottom=0;
+static int disk_panel_split_x=0;
 static char selected_appstat_name[256]="";
 #define RUN_MAX_SUGGESTIONS 2048
 #define RUN_VISIBLE 10
@@ -135,7 +135,7 @@ enum {
 };
 typedef struct { char label[96]; int action; } ContextMenuItem;
 static ContextMenuItem context_items[12]; static int context_count=0;
-static unsigned long long prev_total=0; static double cpu_hist[120],mem_hist[120]; static int histpos=0,histcount=0;
+static unsigned long long prev_total=0; static double cpu_hist[120],mem_hist[120],disk_read_hist[120],disk_write_hist[120],net_rx_hist[120],net_tx_hist[120]; static int histpos=0,histcount=0;
 static unsigned long long prev_disk_read=0,prev_disk_write=0,prev_net_rx=0,prev_net_tx=0;
 static double disk_read_rate=0,disk_write_rate=0,net_rx_rate=0,net_tx_rate=0; static int io_baseline=0;
 #define MAX_GPU 8
@@ -187,12 +187,12 @@ static unsigned long CFill(unsigned long c){
  if(r>218&&g>218&&b>218)return 0x303030;
  return c;
 }
-static unsigned long CLine(unsigned long c){if(!dark_mode)return c;if(c==BLUE)return 0x60CDFF;if(c==GREEN)return 0x6CCB8E;if(c==RED)return 0xFF7777;if(c==AMBER)return 0xF5C451;if(c==LINE||c==0xE1E6EF||c==0xE7EBF1||c==0xAEB8C8)return 0x3A3A3A;return c;}
+static unsigned long CLine(unsigned long c){if(!dark_mode)return c;if(c==BLUE)return 0x005FB7;if(c==GREEN)return 0x6CCB8E;if(c==RED)return 0xFF7777;if(c==AMBER)return 0xF5C451;if(c==LINE||c==0xE1E6EF||c==0xE7EBF1||c==0xAEB8C8)return 0x3A3A3A;return c;}
 static unsigned long CText(unsigned long c){
  if(!dark_mode)return c;
  if(c==INK)return 0xFFFFFF;
  if(c==MUTED||c==0x687386)return 0xA0A0A0;
- if(c==BLUE)return 0x60CDFF;
+ if(c==BLUE)return 0x005FB7;
  if(c==GREEN)return 0x6CCB8E;
  if(c==RED)return 0xFF7777;
  if(c==AMBER)return 0xF5C451;
@@ -203,7 +203,10 @@ static unsigned long CText(unsigned long c){
 static void fill(int x,int y,int w,int h,unsigned long c){XSetForeground(D,G,CFill(c));if(w>0&&h>0)XFillRectangle(D,W,G,x,y,(unsigned)w,(unsigned)h);}
 static void stroke(int x,int y,int w,int h,unsigned long c){XSetForeground(D,G,CLine(c));if(w>0&&h>0)XDrawRectangle(D,W,G,x,y,(unsigned)w,(unsigned)h);}
 static void ln(int x,int y,int xx,int yy,unsigned long c){XSetForeground(D,G,CLine(c));XDrawLine(D,W,G,x,y,xx,yy);}
-static void text(int x,int y,const char *s,unsigned long c){unsigned long out=CText(c);if(XD&&XF){TaskXftColor fc;fc.pixel=out;fc.color.red=(unsigned short)(((out>>16)&255)*257);fc.color.green=(unsigned short)(((out>>8)&255)*257);fc.color.blue=(unsigned short)((out&255)*257);fc.color.alpha=65535;XftDrawStringUtf8(XD,&fc,XF,x,y,(const unsigned char*)s,(int)strlen(s));}else{XSetForeground(D,G,out);if(FS)Xutf8DrawString(D,W,FS,G,x,y,s,(int)strlen(s));else XDrawString(D,W,G,x,y,s,(int)strlen(s));}}
+static unsigned long text_color(unsigned long c){return dark_mode&&c==BLUE?0x60CDFF:CText(c);}
+static void text(int x,int y,const char *s,unsigned long c){unsigned long out=text_color(c);if(XD&&XF){TaskXftColor fc;fc.pixel=out;fc.color.red=(unsigned short)(((out>>16)&255)*257);fc.color.green=(unsigned short)(((out>>8)&255)*257);fc.color.blue=(unsigned short)((out&255)*257);fc.color.alpha=65535;XftDrawStringUtf8(XD,&fc,XF,x,y,(const unsigned char*)s,(int)strlen(s));}else{XSetForeground(D,G,out);if(FS)Xutf8DrawString(D,W,FS,G,x,y,s,(int)strlen(s));else XDrawString(D,W,G,x,y,s,(int)strlen(s));}}
+static void fill_fixed(int x,int y,int w,int h,unsigned long c){XSetForeground(D,G,c);if(w>0&&h>0)XFillRectangle(D,W,G,x,y,(unsigned)w,(unsigned)h);}
+static void stroke_fixed(int x,int y,int w,int h,unsigned long c){XSetForeground(D,G,c);if(w>0&&h>0)XDrawRectangle(D,W,G,x,y,(unsigned)w,(unsigned)h);}
 static void load_theme(void){const char *home=getenv("HOME");if(!home)return;char path[PATH_MAX];size_t n=strnlen(home,sizeof path-32);if(n>=sizeof path-32)return;memcpy(path,home,n);strcpy(path+n,"/.config/wintask-linux/theme");FILE*f=fopen(path,"r");if(f){int v=0;if(fscanf(f,"%d",&v)==1)dark_mode=v?1:0;fclose(f);}}
 static void save_theme(void){const char *home=getenv("HOME");if(!home)return;char dir[PATH_MAX],path[PATH_MAX];size_t n=strnlen(home,sizeof dir-32);if(n>=sizeof dir-32)return;memcpy(dir,home,n);strcpy(dir+n,"/.config/wintask-linux");mkdir(dir,0700);size_t d=strlen(dir);if(d+7>=sizeof path)return;memcpy(path,dir,d);strcpy(path+d,"/theme");FILE*f=fopen(path,"w");if(f){fprintf(f,"%d\n",dark_mode?1:0);fclose(f);}}
 static void format_cpu(double value,char *out,size_t size){if(value<0.001)snprintf(out,size,"<0.001%%");else snprintf(out,size,"%.3f%%",value);}
@@ -216,7 +219,7 @@ static void cliptext(int x,int y,int max,const char *s,unsigned long c){
 }
 static void righttext(int x,int y,int w,const char*s,unsigned long c){int tw=measured_text_width(s?s:"");if(tw>w){cliptext(x,y,w,s,c);return;}text(x+w-tw,y,s?s:"",c);}
 static int measured_user_width(const char *s){if(XD&&XFUser){TaskXGlyphInfo e;XftTextExtentsUtf8(D,XFUser,(const unsigned char*)s,(int)strlen(s),&e);return e.xOff;}return measured_text_width(s);}
-static void text_user(int x,int y,const char *s,unsigned long c){unsigned long out=CText(c);if(XD&&XFUser){TaskXftColor fc;fc.pixel=out;fc.color.red=(unsigned short)(((out>>16)&255)*257);fc.color.green=(unsigned short)(((out>>8)&255)*257);fc.color.blue=(unsigned short)((out&255)*257);fc.color.alpha=65535;XftDrawStringUtf8(XD,&fc,XFUser,x,y,(const unsigned char*)s,(int)strlen(s));}else text(x,y,s,c);}
+static void text_user(int x,int y,const char *s,unsigned long c){unsigned long out=text_color(c);if(XD&&XFUser){TaskXftColor fc;fc.pixel=out;fc.color.red=(unsigned short)(((out>>16)&255)*257);fc.color.green=(unsigned short)(((out>>8)&255)*257);fc.color.blue=(unsigned short)((out&255)*257);fc.color.alpha=65535;XftDrawStringUtf8(XD,&fc,XFUser,x,y,(const unsigned char*)s,(int)strlen(s));}else text(x,y,s,c);}
 static void cliptext_user(int x,int y,int max,const char *s,unsigned long c){char b[128];snprintf(b,sizeof b,"%s",s?s:"");if(max<1)return;if(measured_user_width(b)<=max){text_user(x,y,b,c);return;}size_t n=strlen(b),cut=0,best=0;const char *ell="…";char cand[128];while(cut<n){unsigned char ch=(unsigned char)b[cut];size_t step=(ch<0x80)?1:((ch&0xE0)==0xC0?2:((ch&0xF0)==0xE0?3:4));if(cut+step>n)break;cut+=step;if(cut+strlen(ell)>=sizeof cand)break;memcpy(cand,b,cut);strcpy(cand+cut,ell);if(measured_user_width(cand)>max)break;best=cut;}if(best){memcpy(cand,b,best);strcpy(cand+best,ell);text_user(x,y,cand,c);}else if(measured_user_width(ell)<=max)text_user(x,y,ell,c);}
 static void center(int x,int y,int w,const char*s,unsigned long c){int tw=measured_text_width(s?s:"");int tx=x+(w-tw)/2;if(tx<x)tx=x;text(tx,y,s?s:"",c);}
 static void panel(int x,int y,int w,int h){fill(x,y,w,h,PANEL);stroke(x,y,w,h,LINE);}
@@ -407,14 +410,14 @@ static void draw_user_badge(void){
  int bx=user_badge_x(),bw=user_badge_width(),by=13,bh=36;
  fill(bx,by,bw,bh,0xF0F3F8);
  stroke(bx,by,bw,bh,LINE);
- fill(bx+1,by+7,3,bh-14,BLUE);
+ fill(bx+1,by+7,3,bh-14,CText(BLUE));
  cliptext_user(bx+14,by+23,bw-28,who,INK);
 }
 static void draw_nav(void){
  fill(0,0,ww,hh,BG);fill(0,0,ww,62,PANEL);fill(0,0,5,62,BLUE);text_user(24,39,"LinuxManager",INK);ln(0,61,ww,61,LINE);draw_user_badge();
  fill(0,62,NAVW,hh-86,0xEDF1F7);
- for(int i=0;i<PAGE_COUNT;i++){int y=86+i*38;if(page==i){fill(9,y-23,NAVW-18,33,0xDFE8FF);fill(9,y-23,4,33,BLUE);}text(28,y,pages[i],page==i?BLUE:INK);}
- int ty=hh-60;fill(12,ty,NAVW-24,28,dark_mode?0x34445A:0xFFFFFF);stroke(12,ty,NAVW-24,28,dark_mode?0x50617A:LINE);fill(23,ty+9,10,10,dark_mode?0x60CDFF:BLUE);text(42,ty+19,dark_mode?"Light mode":"Dark mode",dark_mode?0x60CDFF:BLUE);
+ for(int i=0;i<PAGE_COUNT;i++){int y=86+i*38;if(page==i){fill(9,y-23,NAVW-18,33,0xDFE8FF);fill(9,y-23,4,33,BLUE);}text(28,y,pages[i],INK);}
+ int ty=hh-60;fill(12,ty,NAVW-24,28,dark_mode?PALE:WHITE);stroke_fixed(12,ty,NAVW-24,28,BLUE);fill_fixed(23,ty+9,10,10,BLUE);text(42,ty+19,dark_mode?"Light mode":"Dark mode",INK);
  ln(NAVW,62,NAVW,hh-24,LINE);fill(0,hh-24,ww,24,PANEL);ln(0,hh-24,ww,hh-24,LINE);
  unsigned long sc=MUTED;if(status_failed())sc=RED;else if(status_processing())sc=AMBER;else if(status_action_result()||!strncasecmp(statusmsg,"Selected",8)||!strncasecmp(statusmsg,"Ready",5))sc=GREEN;
  fill(12,hh-15,7,7,sc);cliptext(28,hh-7,ww-44,statusmsg,sc);
@@ -438,17 +441,54 @@ static void draw_processes(int details){
  }
  if(!proc_view_n)text(x+15,rowtop+20,"No matching processes.",MUTED);
 }
+static void format_bytes_short(unsigned long long bytes,char*out,size_t cap);
+static void format_count_compact(unsigned long long n,char*out,size_t cap);
 static void draw_graph(int x,int y,int w,int h,const char*title,const char*value,double*hist,int count,unsigned long color){
- panel(x,y,w,h);text(x+16,y+24,title,INK);cliptext(x+w-270,y+24,254,value,color);
+ panel(x,y,w,h);int valuew=w>=420?220:156,valuex=x+w-14-valuew;cliptext(x+16,y+24,valuex-x-26,title,INK);righttext(valuex,y+24,valuew,value,color);
  int gx=x+16,gy=y+40,gw=w-32,gh=h-58;for(int k=1;k<4;k++)ln(gx,gy+gh*k/4,gx+gw,gy+gh*k/4,LINE);
  if(count>1){for(int i=1;i<count;i++){int a=(histpos-count+i-1+120)%120,b=(histpos-count+i+120)%120;int x1=gx+(i-1)*gw/(count-1),x2=gx+i*gw/(count-1);int y1=gy+gh-(int)(hist[a]*gh/100.0),y2=gy+gh-(int)(hist[b]*gh/100.0);ln(x1,y1,x2,y2,color);}}
 }
+static void draw_cpu_perf_graph(int x,int y,int w,int h,const char*value){
+ panel(x,y,w,h);text(x+14,y+24,"CPU usage",INK);righttext(x+w-170,y+24,156,value,BLUE);
+ int gx=x+14,gy=y+35,gw=w-28,gh=h-72;if(gh<28)gh=28;for(int k=1;k<4;k++)ln(gx,gy+gh*k/4,gx+gw,gy+gh*k/4,LINE);
+ if(histcount>1)for(int i=1;i<histcount;i++){int a=(histpos-histcount+i-1+120)%120,b=(histpos-histcount+i+120)%120;int x1=gx+(i-1)*gw/(histcount-1),x2=gx+i*gw/(histcount-1);int y1=gy+gh-(int)(cpu_hist[a]*gh/100.0),y2=gy+gh-(int)(cpu_hist[b]*gh/100.0);ln(x1,y1,x2,y2,BLUE);}
+ int n=core_count;if(n>16)n=16;if(n<1)return;int by=y+h-24,bgap=3,bw=(gw-bgap*(n-1))/n;if(bw<2)bw=2;for(int i=0;i<n;i++){int cx=gx+i*(bw+bgap),v=core_hist_count?core_hist[i][(core_hist_pos+CORE_HISTORY-1)%CORE_HISTORY]:0;fill(cx,by,bw,7,LINE);if(v>0)fill(cx,by,(bw*v)/100,7,BLUE);}
+}
+static void format_rate_pair_spaced(double a,double b,char*out,size_t cap){double unit=(a>b?a:b)>=1048576.0?1048576.0:1024.0;char aa[24],bb[24];rate_part(a,aa,sizeof aa,unit);rate_part(b,bb,sizeof bb,unit);snprintf(out,cap,"%s / %s %s",aa,bb,unit>1024.0?"M/s":"K/s");}
+static void center_clip(int x,int y,int w,const char*s,unsigned long c){if(measured_text_width(s?s:" ")<=w)center(x,y,w,s?s:"",c);else cliptext(x,y,w,s?s:"",c);}
+static void draw_perf_metric_card(int x,int y,int w,int h,const char*label,const char*value,double ratio,unsigned long accent){
+ panel(x,y,w,h);fill(x+1,y+1,3,h-2,accent);text(x+13,y+20,label,MUTED);righttext(x+13,y+43,w-26,value,INK);fill(x+13,y+h-10,w-26,4,LINE);if(ratio<0)ratio=0;if(ratio>1)ratio=1;int bw=(int)((w-26)*ratio);if(bw>0)fill(x+13,y+h-10,bw,4,accent);
+}
+static void draw_perf_info_strip(int x,int y,int w,int h,const char*const labels[4],const char*const values[4],const unsigned long colors[4]){
+ panel(x,y,w,h);int ix=x+6,iw=w-12,cw=iw/4;
+ for(int i=0;i<4;i++){int cx=ix+i*cw,sw=(i==3)?x+w-6-cx:cw;if(i)ln(cx,y+8,cx,y+h-8,LINE);center_clip(cx+4,y+19,sw-8,labels[i],MUTED);center_clip(cx+4,y+41,sw-8,values[i],colors[i]);}
+}
+static void draw_dual_rate_graph(int x,int y,int w,int h,const char*title,const char*value,const char*label_a,const char*label_b,double*hist_a,double*hist_b,int count,unsigned long color_a,unsigned long color_b){
+ panel(x,y,w,h);int valuew=w>=420?190:154;righttext(x+w-14-valuew,y+24,valuew,value,color_a);cliptext(x+14,y+24,w-valuew-38,title,INK);
+ int gx=x+14,gw=w-28,half=(h-64)/2;if(gw<1||half<18)return;double peak_a=1.0,peak_b=1.0;for(int i=0;i<count;i++){int idx=(histpos-count+i+120)%120;if(hist_a[idx]>peak_a)peak_a=hist_a[idx];if(hist_b[idx]>peak_b)peak_b=hist_b[idx];}
+ int lane_y[2]={y+38,y+38+half+5};double*series[2]={hist_a,hist_b};double peaks[2]={peak_a,peak_b};unsigned long colors[2]={color_a,color_b};const char*labels[2]={label_a,label_b};
+ for(int lane=0;lane<2;lane++){int ly=lane_y[lane];fill(x+14,ly,7,7,colors[lane]);text(x+26,ly+8,labels[lane],MUTED);int gy=ly+12,gh=half-14;if(gh<5)gh=5;for(int k=1;k<3;k++)ln(gx,gy+gh*k/3,gx+gw,gy+gh*k/3,LINE);if(count>1)for(int i=1;i<count;i++){int a=(histpos-count+i-1+120)%120,b=(histpos-count+i+120)%120;int x1=gx+(i-1)*gw/(count-1),x2=gx+i*gw/(count-1);int y1=gy+gh-(int)(series[lane][a]*gh/peaks[lane]),y2=gy+gh-(int)(series[lane][b]*gh/peaks[lane]);ln(x1,y1,x2,y2,colors[lane]);}}
+}
+static void format_perf_uptime(char*out,size_t cap){struct sysinfo si;if(sysinfo(&si)!=0){snprintf(out,cap,"N/A");return;}unsigned long long s=(unsigned long long)si.uptime,d=s/86400ULL,h=(s/3600ULL)%24ULL,m=(s/60ULL)%60ULL,sec=s%60ULL;if(d)snprintf(out,cap,"%llud %02llu:%02llu",d,h,m);else snprintf(out,cap,"%02llu:%02llu:%02llu",h,m,sec);}
 static void draw_performance(void){
- int x=NAVW+26,y=84,w=ww-NAVW-50;unsigned long long used,total;double mp=read_mem_percent(&used,&total);double cp=cpu_hist[(histpos+119)%120];long ncpu=sysconf(_SC_NPROCESSORS_ONLN);if(ncpu<1)ncpu=1;
- char a[128],b[128];snprintf(a,sizeof a,"%.1f%% | %.2f / %ld cores",cp,cp*(double)ncpu/100.0,ncpu);snprintf(b,sizeof b,"%.1f%% | %.2f / %.2f GiB",mp,used/1073741824.0,total/1073741824.0);
- text(x,y,"Performance",INK);text(x,y+24,"Live CPU, memory, disk I/O and network throughput.",MUTED);int gw=(w-24)/2,gw2=w-gw-24,gh=(hh-y-100)/2;if(gh<160)gh=160;
- draw_graph(x,y+42,gw,gh,"CPU usage",a,cpu_hist,histcount,BLUE);draw_graph(x+gw+24,y+42,gw2,gh,"Memory usage",b,mem_hist,histcount,GREEN);
- struct sysinfo si;sysinfo(&si);char z[256];snprintf(z,sizeof z,"Logical processors: %ld",ncpu);text(x,y+gh+65,z,INK);snprintf(z,sizeof z,"Memory in use: %.2f GiB / %.2f GiB",used/1073741824.0,total/1073741824.0);text(x,y+gh+91,z,INK);snprintf(z,sizeof z,"Disk read: %.1f KiB/s | Disk write: %.1f KiB/s",disk_read_rate/1024.0,disk_write_rate/1024.0);text(x,y+gh+117,z,INK);snprintf(z,sizeof z,"Network received: %.1f KiB/s | Network sent: %.1f KiB/s",net_rx_rate/1024.0,net_tx_rate/1024.0);text(x,y+gh+143,z,INK);snprintf(z,sizeof z,"System uptime: %ld days, %ld hours, %ld minutes | Processes: %d",si.uptime/86400,(si.uptime/3600)%24,(si.uptime/60)%60,nproc);text(x,y+gh+169,z,INK);
+ int x=NAVW+26,y=84,w=ww-NAVW-50,bottom=hh-44;unsigned long long used=0,total=0;read_mem_percent(&used,&total);double cp=cpu_hist[(histpos+119)%120];long ncpu=sysconf(_SC_NPROCESSORS_ONLN);if(ncpu<1)ncpu=1;
+ char cpuval[64],memval[64],diskval[64],netval[64];snprintf(cpuval,sizeof cpuval,"%.1f%%",cp);snprintf(memval,sizeof memval,"%.1f / %.1f GiB",used/1073741824.0,total/1073741824.0);format_rate_pair_spaced(disk_read_rate,disk_write_rate,diskval,sizeof diskval);format_rate_pair_spaced(net_rx_rate,net_tx_rate,netval,sizeof netval);
+ text(x,y,"Performance",INK);text(x,y+24,"Live utilization and throughput history.",MUTED);
+ int top=y+54,cardh=66,gap=10,cw=(w-gap*3)/4,lastw=w-3*(cw+gap);double diskratio=(disk_read_rate+disk_write_rate)/(5.0*1048576.0),netratio=(net_rx_rate+net_tx_rate)/(5.0*1048576.0);
+ draw_perf_metric_card(x,top,cw,cardh,"CPU usage",cpuval,cp/100.0,BLUE);
+ draw_perf_metric_card(x+cw+gap,top,cw,cardh,"Memory in use",memval,total?(double)used/total:0,GREEN);
+ draw_perf_metric_card(x+2*(cw+gap),top,cw,cardh,"Disk R/W",diskval,diskratio,AMBER);
+ draw_perf_metric_card(x+3*(cw+gap),top,lastw,cardh,"Network RX/TX",netval,netratio,BLUE);
+ int charts_y=top+cardh+12,chartgap=12,chartw=(w-chartgap)/2,chartw2=w-chartgap-chartw,info_h=54,info_gap=10,info_rows=(bottom-charts_y>=410)?2:1;
+ int chartspace=bottom-charts_y-info_rows*info_h-(info_rows+1)*info_gap;int chart_h=(chartspace-chartgap)/2;if(chart_h>160)chart_h=160;if(chart_h<92)chart_h=92;
+ char pair[96];draw_cpu_perf_graph(x,charts_y,chartw,chart_h,cpuval);draw_graph(x+chartw+chartgap,charts_y,chartw2,chart_h,"Memory usage",memval,mem_hist,histcount,GREEN);
+ format_rate_pair_spaced(disk_read_rate,disk_write_rate,pair,sizeof pair);draw_dual_rate_graph(x,charts_y+chart_h+chartgap,chartw,chart_h,"Disk read / write",pair,"Read","Write",disk_read_hist,disk_write_hist,histcount,BLUE,AMBER);
+ format_rate_pair_spaced(net_rx_rate,net_tx_rate,pair,sizeof pair);draw_dual_rate_graph(x+chartw+chartgap,charts_y+chart_h+chartgap,chartw2,chart_h,"Network RX / TX",pair,"Receive","Send",net_rx_hist,net_tx_hist,histcount,BLUE,GREEN);
+ int info_y=charts_y+2*chart_h+chartgap+info_gap;unsigned long long threads=0;for(int i=0;i<nproc;i++)threads+=proc[i].threads;
+ char procval[32],threadval[32],coreval[32],uptimeval[32],availval[48],diskreadval[48],diskwriteval[48],nettotalval[96];snprintf(procval,sizeof procval,"%d",nproc);format_count_compact(threads,threadval,sizeof threadval);snprintf(coreval,sizeof coreval,"%ld",ncpu);format_perf_uptime(uptimeval,sizeof uptimeval);
+ format_bytes_short(total>used?total-used:0,availval,sizeof availval);format_bytes_short(prev_disk_read,diskreadval,sizeof diskreadval);format_bytes_short(prev_disk_write,diskwriteval,sizeof diskwriteval);char rxval[48],txval[48];format_bytes_short(prev_net_rx,rxval,sizeof rxval);format_bytes_short(prev_net_tx,txval,sizeof txval);snprintf(nettotalval,sizeof nettotalval,"%s / %s",rxval,txval);
+ const char*labels1[4]={"Processes","Threads","Logical processors","System uptime"};const char*values1[4]={procval,threadval,coreval,uptimeval};const unsigned long colors1[4]={BLUE,GREEN,BLUE,AMBER};draw_perf_info_strip(x,info_y,w,info_h,labels1,values1,colors1);
+ if(info_rows>1){const char*labels2[4]={"Available memory","Disk read total","Disk write total","Network RX / TX"};const char*values2[4]={availval,diskreadval,diskwriteval,nettotalval};const unsigned long colors2[4]={GREEN,BLUE,AMBER,BLUE};draw_perf_info_strip(x,info_y+info_h+info_gap,w,info_h,labels2,values2,colors2);}
 }
 typedef struct {char name[64],home[256],shell[256];unsigned uid;} UserEntry;
 static int cmp_user_entry(const void *a,const void *b){return strcasecmp(((const UserEntry*)a)->name,((const UserEntry*)b)->name);}
@@ -492,7 +532,7 @@ static void startup_action(int action){
 }
 static int history_filtered_index(int position){int seen=0;for(int i=0;i<nappstats;i++)if(list_matches(2,appstats[i].name)){if(seen++==position)return i;}return -1;}
 static void draw_history(void){
- int x=NAVW+26,y=84,right=ww-24;char b[256];text(x,y,"App history",INK);draw_page_subtitle(x,y+24,"Select rows with a click; scroll to browse session CPU and peak-memory history.");draw_list_search(2);y+=54;
+ int x=NAVW+26,y=84,right=ww-24;char b[256];text(x,y,"App history",INK);draw_page_subtitle(x,y+24,"Select rows with a click. Scroll to browse session CPU and peak-memory history.");draw_list_search(2);y+=54;
  fill(x,y,right-x,32,0xF0F3F8);text(x+12,y+21,"Application / process",MUTED);text(x+450,y+21,"Average CPU",MUTED);text(x+620,y+21,"Peak memory",MUTED);text(x+790,y+21,"Samples",MUTED);y+=52;
  int count=0;for(int i=0;i<nappstats;i++)if(list_matches(2,appstats[i].name))count++;int visible=(hh-62-y)/29;if(visible<1)visible=1;int maxscroll=count>visible?count-visible:0;if(history_scroll>maxscroll)history_scroll=maxscroll;if(history_scroll<0)history_scroll=0;
  int end=history_scroll+visible;if(end>count)end=count;int shown=0;
@@ -510,7 +550,7 @@ static void load_services(void){
  pclose(f);qsort(services,nservices,sizeof(services[0]),cmp_service);selected_service=service_find_unit(selected_service_unit);
 }
 static int service_filtered_index(int position){int seen=0;for(int i=0;i<nservices;i++){char blob[600];snprintf(blob,sizeof blob,"%.150s %.30s %.30s %.30s %.250s",services[i].unit,services[i].load,services[i].active,services[i].sub,services[i].desc);if(!list_matches(6,blob))continue;if(seen++==position)return i;}return -1;}
-static void draw_services(void){int x=NAVW+26,y=84,right=ww-24;text(x,y,"Services",INK);draw_page_subtitle(x,y+24,"Systemd units. Right-click for state-appropriate actions; results are verified.");draw_list_search(6);y+=54;fill(x,y,right-x,32,0xF0F3F8);text(x+12,y+21,"Unit",MUTED);text(x+430,y+21,"Load",MUTED);text(x+570,y+21,"Active",MUTED);text(x+740,y+21,"Description",MUTED);y+=52;load_services();int count=0;for(int i=0;i<nservices;i++){char blob[600];snprintf(blob,sizeof blob,"%.150s %.30s %.30s %.30s %.250s",services[i].unit,services[i].load,services[i].active,services[i].sub,services[i].desc);if(list_matches(6,blob))count++;}int visible=(hh-44-y)/28;if(visible<0)visible=0;if(scroll>count-visible)scroll=count>visible?count-visible:0;for(int pos=scroll;pos<count&&pos<scroll+visible;pos++){int i=service_filtered_index(pos);if(i<0)continue;Service*sv=&services[i];int yy=y+(pos-scroll)*28;if(selected_service_unit[0]&&!strcmp(sv->unit,selected_service_unit))fill(x,yy-19,right-x,26,status_processing()?0xFFF1D6:PALE);else if((pos-scroll)%2==0)fill(x,yy-19,right-x,26,WHITE);cliptext(x+12,yy,400,sv->unit,INK);cliptext(x+430,yy,120,sv->load,MUTED);cliptext(x+570,yy,150,sv->active,!strcmp(sv->active,"active")?GREEN:INK);cliptext(x+740,yy,right-x-750,sv->desc,MUTED);}if(!count)text(x+12,y,list_queries[6][0]?"No services match your search.":"No systemd service units available.",MUTED);}
+static void draw_services(void){int x=NAVW+26,y=84,right=ww-24;text(x,y,"Services",INK);draw_page_subtitle(x,y+24,"Systemd units.");draw_list_search(6);y+=54;fill(x,y,right-x,32,0xF0F3F8);text(x+12,y+21,"Unit",MUTED);text(x+430,y+21,"Load",MUTED);text(x+570,y+21,"Active",MUTED);text(x+740,y+21,"Description",MUTED);y+=52;load_services();int count=0;for(int i=0;i<nservices;i++){char blob[600];snprintf(blob,sizeof blob,"%.150s %.30s %.30s %.30s %.250s",services[i].unit,services[i].load,services[i].active,services[i].sub,services[i].desc);if(list_matches(6,blob))count++;}int visible=(hh-44-y)/28;if(visible<0)visible=0;if(scroll>count-visible)scroll=count>visible?count-visible:0;for(int pos=scroll;pos<count&&pos<scroll+visible;pos++){int i=service_filtered_index(pos);if(i<0)continue;Service*sv=&services[i];int yy=y+(pos-scroll)*28;if(selected_service_unit[0]&&!strcmp(sv->unit,selected_service_unit))fill(x,yy-19,right-x,26,status_processing()?0xFFF1D6:PALE);else if((pos-scroll)%2==0)fill(x,yy-19,right-x,26,WHITE);cliptext(x+12,yy,400,sv->unit,INK);cliptext(x+430,yy,120,sv->load,MUTED);cliptext(x+570,yy,150,sv->active,!strcmp(sv->active,"active")?GREEN:INK);cliptext(x+740,yy,right-x-750,sv->desc,MUTED);}if(!count)text(x+12,y,list_queries[6][0]?"No services match your search.":"No systemd service units available.",MUTED);}
 
 
 static int read_service_properties(const char *unit,char *active,size_t asz,char *sub,size_t ssz,char *type,size_t tsz,char *result,size_t rsz){
@@ -568,16 +608,90 @@ static void format_bytes_short(unsigned long long bytes,char*out,size_t cap){
  static const char*units[]={"B","KiB","MiB","GiB","TiB","PiB"};double n=(double)bytes;int u=0;while(n>=1024.0&&u<5){n/=1024.0;u++;}if(!u)snprintf(out,cap,"%llu B",bytes);else snprintf(out,cap,"%.1f %s",n,units[u]);
 }
 static int storage_device_name(const char*name){char path[PATH_MAX];snprintf(path,sizeof path,"/sys/block/%.180s",name);return access(path,F_OK)==0;}
-static void draw_disk_network(void){
- int x=NAVW+26,y=84,w=ww-NAVW-50;char line[512],name[64];text(x,y,"Disk & Network",INK);draw_page_subtitle(x,y+24,"Aligned storage totals and per-interface network counters, including packet counts.");draw_list_search(7);
- int top=y+54,avail=hh-44-top;if(avail<190)avail=190;int dh=avail*40/100;if(dh<126)dh=126;if(dh>240)dh=240;int ny=top+dh+12,nh=hh-44-ny;if(nh<130)nh=130;disk_panel_bottom=top+dh;
- panel(x,top,w,dh);text(x+16,top+25,"Storage devices",BLUE);int devx=x+16,readx=x+(w*38)/100,writex=x+(w*68)/100;int hy=top+50;fill(x+1,hy,w-2,27,0xF0F3F8);text(devx,hy+19,"Device",MUTED);text(readx,hy+19,"Total read",MUTED);text(writex,hy+19,"Total written",MUTED);
- int visible=(dh-100)/25;if(visible<1)visible=1;int count=0;FILE*f=fopen("/proc/diskstats","r");if(f){while(fgets(line,sizeof line,f)){unsigned maj,min;unsigned long long rd=0,wr=0;if(sscanf(line,"%u %u %63s %*u %*u %llu %*u %*u %*u %*u %llu",&maj,&min,name,&rd,&wr)==5&&storage_device_name(name)&&list_matches(7,name))count++;}fclose(f);}int dmax=count>visible?count-visible:0;if(disk_scroll>dmax)disk_scroll=dmax;if(disk_scroll<0)disk_scroll=0;
- f=fopen("/proc/diskstats","r");int row=0,drawn=0;if(f){while(fgets(line,sizeof line,f)){unsigned maj,min;unsigned long long rd=0,wr=0;if(sscanf(line,"%u %u %63s %*u %*u %llu %*u %*u %*u %*u %llu",&maj,&min,name,&rd,&wr)!=5||!storage_device_name(name)||!list_matches(7,name))continue;if(row++<disk_scroll)continue;if(drawn>=visible)break;int yy=top+98+drawn*25;if(drawn%2==0)fill(x+2,yy-18,w-4,24,WHITE);char rb[48],wb[48];format_bytes_short(rd*512ULL,rb,sizeof rb);format_bytes_short(wr*512ULL,wb,sizeof wb);cliptext(devx,yy,readx-devx-18,name,INK);cliptext(readx,yy,writex-readx-18,rb,INK);cliptext(writex,yy,x+w-writex-18,wb,INK);drawn++;}fclose(f);}if(!drawn)text(x+16,top+98,list_queries[7][0]?"No storage devices match your search.":"No storage device counters available.",MUTED);
- panel(x,ny,w,nh);text(x+16,ny+25,"Network interfaces",GREEN);int ix=x+16,rx=x+(w*24)/100,rpx=x+(w*43)/100,tx=x+(w*56)/100,tpx=x+(w*77)/100;hy=ny+50;fill(x+1,hy,w-2,27,0xF0F3F8);text(ix,hy+19,"Interface",MUTED);text(rx,hy+19,"Received",MUTED);text(rpx,hy+19,"RX packets",MUTED);text(tx,hy+19,"Sent",MUTED);text(tpx,hy+19,"TX packets",MUTED);
- visible=(nh-100)/27;if(visible<1)visible=1;count=0;f=fopen("/proc/net/dev","r");int skip=0;if(f){while(fgets(line,sizeof line,f)){if(skip++<2)continue;if(sscanf(line," %63[^:]:",name)==1&&list_matches(7,name))count++;}fclose(f);}int nmax=count>visible?count-visible:0;if(network_scroll>nmax)network_scroll=nmax;if(network_scroll<0)network_scroll=0;
- f=fopen("/proc/net/dev","r");skip=0;row=0;drawn=0;if(f){while(fgets(line,sizeof line,f)){if(skip++<2)continue;unsigned long long rxbytes=0,rxpackets=0,txbytes=0,txpackets=0;if(sscanf(line," %63[^:]: %llu %llu %*u %*u %*u %*u %*u %*u %llu %llu",name,&rxbytes,&rxpackets,&txbytes,&txpackets)!=5||!list_matches(7,name))continue;if(row++<network_scroll)continue;if(drawn>=visible)break;int yy=ny+98+drawn*27;if(drawn%2==0)fill(x+2,yy-19,w-4,26,WHITE);char rb[48],tb[48],rp[32],tp[32];format_bytes_short(rxbytes,rb,sizeof rb);format_bytes_short(txbytes,tb,sizeof tb);snprintf(rp,sizeof rp,"%llu",rxpackets);snprintf(tp,sizeof tp,"%llu",txpackets);cliptext(ix,yy,rx-ix-12,name,INK);cliptext(rx,yy,rpx-rx-14,rb,INK);cliptext(rpx,yy,tx-rpx-14,rp,INK);cliptext(tx,yy,tpx-tx-14,tb,INK);cliptext(tpx,yy,x+w-tpx-14,tp,INK);drawn++;}fclose(f);}if(!drawn)text(x+16,ny+98,list_queries[7][0]?"No interfaces match your search.":"No network interfaces reported.",MUTED);
+static void format_count_compact(unsigned long long n,char*out,size_t cap){
+ if(n>=1000000000ULL)snprintf(out,cap,"%.1fG",(double)n/1000000000.0);
+ else if(n>=1000000ULL)snprintf(out,cap,"%.1fM",(double)n/1000000.0);
+ else if(n>=1000ULL)snprintf(out,cap,"%.1fk",(double)n/1000.0);
+ else snprintf(out,cap,"%llu",n);
 }
+static void draw_disk_rate_card(int x,int y,int w,int h,const char*label,double bytes,unsigned long accent){
+ char b[64],value[80];if(bytes<0)bytes=0;format_bytes_short((unsigned long long)bytes,b,sizeof b);snprintf(value,sizeof value,"%s/s",b);
+ panel(x,y,w,h);fill(x+1,y+1,3,h-2,accent);text(x+13,y+20,label,MUTED);cliptext(x+13,y+43,w-26,value,INK);
+ fill(x+13,y+h-10,w-26,4,LINE);double ratio=bytes/(1024.0*1024.0);if(ratio>1)ratio=1;if(ratio<0)ratio=0;int bw=(int)((w-26)*ratio);if(bw>0)fill(x+13,y+h-10,bw,4,accent);
+}
+static void draw_disk_count_badge(int x,int y,const char*label,unsigned long accent){
+ int tw=measured_text_width(label);int bw=tw+18;if(bw<64)bw=64;fill(x,y,bw,20,PALE);stroke(x,y,bw,20,LINE);center(x,y+14,bw,label,accent);
+}
+static void draw_full_name(int x,int y,int w,const char*s,unsigned long c){
+ if(!s||!*s)return;
+ if(measured_text_width(s)<=w){text(x,y,s,c);return;}
+ size_t n=strlen(s),cut=n/2;while(cut<n&&s[cut]!=' '&&s[cut]!='_'&&s[cut]!='-'&&s[cut]!='.')cut++;if(cut>=n)cut=n/2;
+ char a[128],b[128];snprintf(a,sizeof a,"%.*s",(int)cut,s);size_t off=cut;while(off<n&&(s[off]==' '||s[off]=='_'||s[off]=='-'||s[off]=='.'))off++;snprintf(b,sizeof b,"%s",s+off);
+ while(cut>1&&measured_text_width(a)>w){cut--;snprintf(a,sizeof a,"%.*s",(int)cut,s);off=cut;while(off<n&&(s[off]==' '||s[off]=='_'||s[off]=='-'||s[off]=='.'))off++;snprintf(b,sizeof b,"%s",s+off);}
+ text(x,y,a,c);if(*b)text(x,y+14,b,c);
+}
+static void draw_detail_metric_tile(int x,int y,int w,int h,const char*label,const char*value){
+ fill(x,y,w,h,0xF0F3F8);stroke(x,y,w,h,LINE);fill(x+1,y+1,3,h-2,BLUE);
+ if(measured_text_width(label)<=w-12)center(x+6,y+15,w-12,label,MUTED);else {const char*split=strrchr(label,' ');if(split&&split>label){char first[48];size_t n=(size_t)(split-label);if(n>=sizeof first)n=sizeof first-1;memcpy(first,label,n);first[n]=0;center(x+6,y+12,w-12,first,MUTED);center(x+6,y+24,w-12,split+1,MUTED);}else center(x+6,y+15,w-12,label,MUTED);}
+ center(x+6,y+h-6,w-12,value,INK);
+}
+static void draw_disk_network(void){
+ typedef struct {char name[64];unsigned long long read_sectors,write_sectors,read_ops,write_ops,in_flight,io_ms,weighted_ms;} DiskItem;
+ typedef struct {char name[64],state[16];unsigned long long rx_bytes,rx_packets,rx_errors,rx_drop,tx_bytes,tx_packets,tx_errors,tx_drop;} NetItem;
+ int x=NAVW+26,y=84,w=ww-NAVW-50;char line[512],name[64];
+ text(x,y,"Disk & Network",INK);draw_page_subtitle(x,y+24,"Live disk throughput, device I/O and interface traffic.");draw_list_search(7);
+ int top=y+54,bottom=hh-44,card_h=66,card_gap=10,cards_w=(w-card_gap*3)/4;int last_card_w=w-3*(cards_w+card_gap);
+ draw_disk_rate_card(x,top,cards_w,card_h,"Disk read rate",disk_read_rate,BLUE);
+ draw_disk_rate_card(x+cards_w+card_gap,top,cards_w,card_h,"Disk write rate",disk_write_rate,AMBER);
+ draw_disk_rate_card(x+2*(cards_w+card_gap),top,cards_w,card_h,"Network received",net_rx_rate,RED);
+ draw_disk_rate_card(x+3*(cards_w+card_gap),top,last_card_w,card_h,"Network sent",net_tx_rate,GREEN);
+ int panels_y=top+card_h+16,ph=bottom-panels_y;if(ph<180)ph=180;int panel_gap=12,dw=(w-panel_gap)/2,nx=x+dw+panel_gap,nw=w-dw-panel_gap;disk_panel_split_x=nx;
+ panel(x,panels_y,dw,ph);panel(nx,panels_y,nw,ph);
+ DiskItem disks[512];int dc=0;FILE*f=fopen("/proc/diskstats","r");if(f){while(fgets(line,sizeof line,f)&&dc<(int)(sizeof disks/sizeof disks[0])){
+  DiskItem item;memset(&item,0,sizeof item);
+  int got=sscanf(line,"%*u %*u %63s %llu %*llu %llu %*llu %llu %*llu %llu %llu %llu %llu",item.name,&item.read_ops,&item.read_sectors,&item.write_ops,&item.write_sectors,&item.in_flight,&item.io_ms,&item.weighted_ms);
+  if(got!=8||!storage_device_name(item.name)||!list_matches(7,item.name))continue;
+  snprintf(disks[dc].name,sizeof disks[dc].name,"%s",item.name);disks[dc].read_sectors=item.read_sectors;disks[dc].write_sectors=item.write_sectors;disks[dc].read_ops=item.read_ops;disks[dc].write_ops=item.write_ops;disks[dc].in_flight=item.in_flight;disks[dc].io_ms=item.io_ms;dc++;
+ }fclose(f);}
+ char badge[48];snprintf(badge,sizeof badge,"%d devices",dc);int badgew=measured_text_width(badge)+18;if(badgew<64)badgew=64;draw_disk_count_badge(x+dw-badgew-12,panels_y+10,badge,BLUE);
+ text(x+14,panels_y+25,"Storage devices",BLUE);text(x+14,panels_y+46,"Cumulative reads, writes and device I/O activity",MUTED);
+ int rowtop=panels_y+60,rowh=132,disk_summary_y=panels_y+ph-88,visible=(disk_summary_y-rowtop-4)/rowh;if(visible<1)visible=1;int dmax=dc>visible?dc-visible:0;if(disk_scroll>dmax)disk_scroll=dmax;if(disk_scroll<0)disk_scroll=0;
+ if(!dc){center(x+12,panels_y+ph/2-3,dw-24,list_queries[7][0]?"No storage devices match your search.":"No storage devices found",MUTED);center(x+12,panels_y+ph/2+16,dw-24,"Device counters are read from /proc/diskstats.",MUTED);}
+ for(int i=disk_scroll;i<dc&&i<disk_scroll+visible;i++){
+  int n=i-disk_scroll,ry=rowtop+n*rowh;if(ry+rowh>disk_summary_y)break;panel(x+7,ry+2,dw-14,rowh-5);
+  char rb[48],wb[48],op[32],ro[32],wo[32],inflight[32],busy[32];format_bytes_short(disks[i].read_sectors*512ULL,rb,sizeof rb);format_bytes_short(disks[i].write_sectors*512ULL,wb,sizeof wb);format_count_compact(disks[i].read_ops+disks[i].write_ops,op,sizeof op);format_count_compact(disks[i].read_ops,ro,sizeof ro);format_count_compact(disks[i].write_ops,wo,sizeof wo);format_count_compact(disks[i].in_flight,inflight,sizeof inflight);snprintf(busy,sizeof busy,"%llu ms",disks[i].io_ms);
+  draw_full_name(x+17,ry+20,dw-34,disks[i].name,INK);ln(x+15,ry+42,x+dw-15,ry+42,LINE);
+  const char*head[3]={"Read","Write","Ops"};const char*vals[3]={rb,wb,op};int gx=x+14,gw=dw-28,cw=gw/3;for(int k=0;k<3;k++){int cx=gx+k*cw,wwcol=k==2?gx+gw-cx:cw;center(cx,ry+58,wwcol,head[k],MUTED);center(cx,ry+73,wwcol,vals[k],INK);}
+  const char*labels[4]={"Read ops","Write ops","In flight","Busy time"};const char*values[4]={ro,wo,inflight,busy};int gap=6,tx=x+13,tw=(dw-26-gap*3)/4,ty=ry+82,th=44;for(int k=0;k<4;k++){int xx=tx+k*(tw+gap),wwtile=(k==3)?x+dw-13-xx:tw;draw_detail_metric_tile(xx,ty,wwtile,th,labels[k],values[k]);}
+ }
+ unsigned long long disk_read_total=0,disk_write_total=0,disk_ops_total=0;int disk_active=0;for(int i=0;i<dc;i++){disk_read_total+=disks[i].read_sectors*512ULL;disk_write_total+=disks[i].write_sectors*512ULL;disk_ops_total+=disks[i].read_ops+disks[i].write_ops;if(disks[i].in_flight>0)disk_active++;}
+ ln(x+12,disk_summary_y,x+dw-12,disk_summary_y,LINE);text(x+12,disk_summary_y+18,"I/O overview",BLUE);
+ int dsumx=x+12,dsumw=(dw-24)/4;char dsv[4][64],dslabels[4][24];format_bytes_short(disk_read_total,dsv[0],sizeof dsv[0]);format_bytes_short(disk_write_total,dsv[1],sizeof dsv[1]);format_count_compact(disk_ops_total,dsv[2],sizeof dsv[2]);snprintf(dsv[3],sizeof dsv[3],"%d / %d",disk_active,dc);snprintf(dslabels[0],sizeof dslabels[0],"Read total");snprintf(dslabels[1],sizeof dslabels[1],"Write total");snprintf(dslabels[2],sizeof dslabels[2],"Total ops");snprintf(dslabels[3],sizeof dslabels[3],"Active");for(int i=0;i<4;i++){int sx=dsumx+i*dsumw,sw=i==3?(x+dw-12-sx):dsumw;text(sx,disk_summary_y+38,dslabels[i],MUTED);text(sx,disk_summary_y+57,dsv[i],INK);}text(x+12,disk_summary_y+77,dc>visible?"Scroll down to see more storage devices.":"Use the scroll wheel to browse storage devices.",MUTED);
+ NetItem nets[512];int nc=0;f=fopen("/proc/net/dev","r");int skip=0;if(f){while(fgets(line,sizeof line,f)&&nc<(int)(sizeof nets/sizeof nets[0])){
+  if(skip++<2)continue;NetItem item;memset(&item,0,sizeof item);
+  int got=sscanf(line," %63[^:]: %llu %llu %llu %llu %*llu %*llu %*llu %*llu %llu %llu %llu %llu",item.name,&item.rx_bytes,&item.rx_packets,&item.rx_errors,&item.rx_drop,&item.tx_bytes,&item.tx_packets,&item.tx_errors,&item.tx_drop);
+  if(got!=9||!list_matches(7,item.name))continue;
+  char statepath[PATH_MAX],state[32]="unknown";snprintf(statepath,sizeof statepath,"/sys/class/net/%.63s/operstate",item.name);FILE*sf=fopen(statepath,"r");if(sf){if(fgets(state,sizeof state,sf))state[strcspn(state,"\r\n")]=0;fclose(sf);}snprintf(item.state,sizeof item.state,"%.15s",state);
+  nets[nc++]=item;
+ }fclose(f);}
+ snprintf(badge,sizeof badge,"%d interfaces",nc);badgew=measured_text_width(badge)+18;if(badgew<64)badgew=64;draw_disk_count_badge(nx+nw-badgew-12,panels_y+10,badge,GREEN);
+ text(nx+14,panels_y+25,"Network interfaces",GREEN);text(nx+14,panels_y+46,"Traffic totals, packets, errors and dropped packets",MUTED);
+ rowtop=panels_y+60;int net_rowh=140,net_summary_y=panels_y+ph-88,nvisible=(net_summary_y-rowtop-4)/net_rowh;if(nvisible<1)nvisible=1;int nmax=nc>nvisible?nc-nvisible:0;if(network_scroll>nmax)network_scroll=nmax;if(network_scroll<0)network_scroll=0;
+ if(!nc){center(nx+12,panels_y+ph/2-3,nw-24,list_queries[7][0]?"No interfaces match your search.":"No network interfaces found",MUTED);center(nx+12,panels_y+ph/2+16,nw-24,"Traffic counters are read from /proc/net/dev.",MUTED);}
+ for(int i=network_scroll;i<nc&&i<network_scroll+nvisible;i++){
+  int n=i-network_scroll,ry=rowtop+n*net_rowh;if(ry+net_rowh>net_summary_y)break;panel(nx+7,ry+2,nw-14,net_rowh-5);
+  char rb[48],tb[48],rp[32],tp[32],re[32],te[32],rdrop[32],tdrop[32],errs[48],drops[48];format_bytes_short(nets[i].rx_bytes,rb,sizeof rb);format_bytes_short(nets[i].tx_bytes,tb,sizeof tb);format_count_compact(nets[i].rx_packets,rp,sizeof rp);format_count_compact(nets[i].tx_packets,tp,sizeof tp);format_count_compact(nets[i].rx_errors,re,sizeof re);format_count_compact(nets[i].tx_errors,te,sizeof te);format_count_compact(nets[i].rx_drop,rdrop,sizeof rdrop);format_count_compact(nets[i].tx_drop,tdrop,sizeof tdrop);snprintf(errs,sizeof errs,"%s / %s",re,te);snprintf(drops,sizeof drops,"%s / %s",rdrop,tdrop);
+  draw_full_name(nx+17,ry+20,nw-34,nets[i].name,INK);int isup=!strcmp(nets[i].state,"up");unsigned long statusfg=isup?GREEN:MUTED,statusbg=isup?0xE1F5EA:0xF0F3F8;char st[20];if(isup)strcpy(st,"UP");else if(!strcmp(nets[i].state,"down"))strcpy(st,"DOWN");else if(!strcmp(nets[i].state,"dormant"))strcpy(st,"IDLE");else if(!strcmp(nets[i].state,"lowerlayerdown"))strcpy(st,"NO LINK");else strcpy(st,"N/A");
+  ln(nx+15,ry+42,nx+nw-15,ry+42,LINE);int gx=nx+14,gw=nw-28,cw=gw/3;const char*heads[3]={"RX","TX","Link"};const char*vals[3]={rb,tb,st};for(int k=0;k<3;k++){int cx=gx+k*cw,wwcol=k==2?gx+gw-cx:cw;center(cx,ry+58,wwcol,heads[k],MUTED);if(k==2){int sw=wwcol-12;fill(cx+6,ry+62,sw,22,statusbg);stroke(cx+6,ry+62,sw,22,LINE);center(cx+6,ry+77,sw,vals[k],statusfg);}else center(cx,ry+73,wwcol,vals[k],INK);}
+  const char*labels[4]={"RX packets","TX packets","RX/TX errors","RX/TX drops"};const char*values[4]={rp,tp,errs,drops};int gap=6,tx=nx+13,tw=(nw-26-gap*3)/4,ty=ry+90,th=44;for(int k=0;k<4;k++){int xx=tx+k*(tw+gap),wwtile=(k==3)?nx+nw-13-xx:tw;draw_detail_metric_tile(xx,ty,wwtile,th,labels[k],values[k]);}
+ }
+ int net_rows_shown=nc-network_scroll;if(net_rows_shown<0)net_rows_shown=0;if(net_rows_shown>nvisible)net_rows_shown=nvisible;int chart_y=rowtop+net_rows_shown*net_rowh+8,chart_space=net_summary_y-chart_y,chart_capacity=(chart_space-26)/58;unsigned long long max_rx=1,max_tx=1;for(int i=0;i<nc;i++){if(nets[i].rx_bytes>max_rx)max_rx=nets[i].rx_bytes;if(nets[i].tx_bytes>max_tx)max_tx=nets[i].tx_bytes;}
+ if(net_rows_shown>0&&chart_capacity>=net_rows_shown){text(nx+12,chart_y+15,"Lifetime traffic by interface",GREEN);int barx=nx+145,barw=nw-145-90;if(barw<20)barw=20;for(int j=0;j<net_rows_shown;j++){int i=network_scroll+j,gy=chart_y+20+j*58;char rv[48],tv[48];format_bytes_short(nets[i].rx_bytes,rv,sizeof rv);format_bytes_short(nets[i].tx_bytes,tv,sizeof tv);draw_full_name(nx+12,gy+12,barx-nx-24,nets[i].name,INK);text(nx+12,gy+35,"RX",MUTED);fill(barx,gy+30,barw,4,LINE);int rbw=(int)((double)barw*(double)nets[i].rx_bytes/(double)max_rx);if(rbw>0)fill(barx,gy+20,rbw,4,RED);text(nx+nw-82,gy+35,rv,INK);text(nx+12,gy+51,"TX",MUTED);fill(barx,gy+46,barw,4,LINE);int tbw=(int)((double)barw*(double)nets[i].tx_bytes/(double)max_tx);if(tbw>0)fill(barx,gy+36,tbw,4,GREEN);text(nx+nw-82,gy+51,tv,INK);}}
+ unsigned long long rx_total=0,tx_total=0,rx_packets_total=0,tx_packets_total=0,rx_errors_total=0,tx_errors_total=0,rx_drops_total=0,tx_drops_total=0;int links_up=0;for(int i=0;i<nc;i++){rx_total+=nets[i].rx_bytes;tx_total+=nets[i].tx_bytes;rx_packets_total+=nets[i].rx_packets;tx_packets_total+=nets[i].tx_packets;rx_errors_total+=nets[i].rx_errors;tx_errors_total+=nets[i].tx_errors;rx_drops_total+=nets[i].rx_drop;tx_drops_total+=nets[i].tx_drop;if(!strcmp(nets[i].state,"up"))links_up++;}
+ ln(nx+12,net_summary_y,nx+nw-12,net_summary_y,LINE);text(nx+12,net_summary_y+18,"Interface overview",GREEN);
+ int nsumx=nx+12,nsumw=(nw-24)/4;char nsv[4][64],nslabels[4][24];format_bytes_short(rx_total,nsv[0],sizeof nsv[0]);format_bytes_short(tx_total,nsv[1],sizeof nsv[1]);format_count_compact(rx_packets_total,nsv[2],sizeof nsv[2]);format_count_compact(tx_packets_total,nsv[3],sizeof nsv[3]);snprintf(nslabels[0],sizeof nslabels[0],"RX total");snprintf(nslabels[1],sizeof nslabels[1],"TX total");snprintf(nslabels[2],sizeof nslabels[2],"RX packets");snprintf(nslabels[3],sizeof nslabels[3],"TX packets");for(int i=0;i<4;i++){int sx=nsumx+i*nsumw,sw=i==3?(nx+nw-12-sx):nsumw;text(sx,net_summary_y+38,nslabels[i],MUTED);text(sx,net_summary_y+57,nsv[i],INK);}char nf[256],erx[32],etx[32],drx[32],dtx[32];format_count_compact(rx_errors_total,erx,sizeof erx);format_count_compact(tx_errors_total,etx,sizeof etx);format_count_compact(rx_drops_total,drx,sizeof drx);format_count_compact(tx_drops_total,dtx,sizeof dtx);snprintf(nf,sizeof nf,"Errors RX/TX %s/%s - Drops RX/TX %s/%s - Links up %d/%d",erx,etx,drx,dtx,links_up,nc);if(measured_text_width(nf)<=nw-24)text(nx+12,net_summary_y+77,nf,MUTED);else text(nx+12,net_summary_y+77,nc>nvisible?"Scroll down to see more network interfaces.":"Use the scroll wheel to browse network interfaces.",MUTED);
+}
+
 static int read_sys_text(const char *path,char *out,size_t cap){FILE*f=fopen(path,"r");if(!f)return 0;int ok=fgets(out,(int)cap,f)!=NULL;fclose(f);if(ok)out[strcspn(out,"\r\n")]=0;return ok;}
 static int read_sys_number(const char *path,double *v){char b[128],*e;if(!read_sys_text(path,b,sizeof b))return 0;errno=0;double n=strtod(b,&e);if(e==b||errno==ERANGE)return 0;*v=n;return 1;}
 static void path_join(char*out,size_t cap,const char*a,const char*b){if(!cap)return;size_t na=strlen(a),nb=strlen(b);if(na>=cap)na=cap-1;memcpy(out,a,na);size_t avail=cap-na-1;if(nb>avail)nb=avail;memcpy(out+na,b,nb);out[na+nb]=0;}
@@ -664,7 +778,7 @@ static void draw_cpu_counters(void){
  f=fopen("/proc/stat","r");int row=0,drawn=0;while(f&&fgets(line,sizeof line,f)){if(strncmp(line,"cpu",3)||line[3]<'0'||line[3]>'9')continue;int n=sscanf(line,"%63s %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu",label,&v[0],&v[1],&v[2],&v[3],&v[4],&v[5],&v[6],&v[7],&v[8],&v[9]);if(n<5||!list_matches(10,label))continue;if(row++<cpu_scroll)continue;if(drawn>=visible)break;int yy=rowbase+drawn*29;if(drawn%2==0)fill(x,yy-21,w,27,WHITE);unsigned long long total=0;for(int i=0;i<n-1;i++)total+=v[i];char b[80];text(col[0],yy,label,INK);snprintf(b,sizeof b,"%llu",v[0]);text(col[1],yy,b,INK);snprintf(b,sizeof b,"%llu",v[2]);text(col[2],yy,b,INK);snprintf(b,sizeof b,"%llu",v[3]);text(col[3],yy,b,INK);snprintf(b,sizeof b,"%llu",total);text(col[4],yy,b,INK);drawn++;}if(f)fclose(f);if(!drawn)text(x+12,rowbase,list_queries[10][0]?"No CPU cores match your search.":"Per-core counters are unavailable.",MUTED);
 }
 static int cpu_details_mode=0;
-static void cpu_mode_button(int x,int y,int w,const char*label,int active){fill(x,y,w,26,active?PALE:WHITE);stroke(x,y,w,26,active?BLUE:LINE);center(x,y+18,w,label,active?BLUE:INK);}
+static void cpu_mode_button(int x,int y,int w,const char*label,int active){fill(x,y,w,30,active?PALE:WHITE);if(active)stroke_fixed(x,y,w,30,BLUE);else stroke(x,y,w,30,LINE);center(x,y+20,w,label,INK);}
 static void draw_cpu_details(void){
  int x=NAVW+26,y=84,w=ww-NAVW-50;text(x,y,"CPU details",INK);draw_page_subtitle(x,y+24,"Compact per-core utilization graphs, with cumulative tick counters available.");draw_list_search(10);
  cpu_mode_button(x,y+38,126,"Per-core graphs",cpu_details_mode==0);cpu_mode_button(x+134,y+38,126,"Tick counters",cpu_details_mode==1);
@@ -788,7 +902,7 @@ static void do_menu(int y){
  else if(action==MA_PROC_COPY_PID){begin_action("copying process PID to clipboard");char b[64];snprintf(b,sizeof b,"printf '%d' | xclip -selection clipboard 2>/dev/null",p->pid);if(system(b)==0)setstatus("PID copied to clipboard.");else setstatus("Clipboard copy needs xclip or xsel.");}
  else if(action==MA_PROC_PROPERTIES){begin_action("reading selected process properties");char b[256],cpu_text[32];format_cpu(p->cpu,cpu_text,sizeof cpu_text);snprintf(b,sizeof b,"PID %d | %.75s | user %.40s | state %c | CPU %s | memory %.1f MB",p->pid,p->name,p->user,p->state,cpu_text,p->rss/1048576.0);setstatus(b);}
 }
-static void add_history(void){unsigned long long u,t;double m=read_mem_percent(&u,&t);cpu_hist[histpos]=read_cpu_percent();mem_hist[histpos]=m;sample_core_history();if(page==8){update_gpu();for(int gi=0;gi<ngpus;gi++)gpu_hist[gi][gpuhistpos]=gpus[gi].have_util?gpus[gi].util:0;gpuhistpos=(gpuhistpos+1)%120;if(gpuhistcount<120)gpuhistcount++;}unsigned long long dr=0,dw=0,nrx=0,ntx=0;FILE*f=fopen("/proc/diskstats","r");if(f){char line[512],name[64];unsigned major,minor;unsigned long long rd,wr;while(fgets(line,sizeof line,f)){if(sscanf(line,"%u %u %63s %*u %*u %llu %*u %*u %*u %*u %llu",&major,&minor,name,&rd,&wr)==5){char path[PATH_MAX];snprintf(path,sizeof path,"/sys/block/%s",name);if(access(path,F_OK)==0){dr+=rd*512ULL;dw+=wr*512ULL;}}}fclose(f);}f=fopen("/proc/net/dev","r");if(f){char line[512],name[64];int skip=0;unsigned long long rx,tx;while(fgets(line,sizeof line,f)){if(skip++<2)continue;if(sscanf(line," %63[^:]: %llu %*u %*u %*u %*u %*u %*u %*u %llu",name,&rx,&tx)==3){nrx+=rx;ntx+=tx;}}fclose(f);}if(io_baseline){disk_read_rate=dr>=prev_disk_read?(double)(dr-prev_disk_read):0;disk_write_rate=dw>=prev_disk_write?(double)(dw-prev_disk_write):0;net_rx_rate=nrx>=prev_net_rx?(double)(nrx-prev_net_rx):0;net_tx_rate=ntx>=prev_net_tx?(double)(ntx-prev_net_tx):0;}prev_disk_read=dr;prev_disk_write=dw;prev_net_rx=nrx;prev_net_tx=ntx;io_baseline=1;histpos=(histpos+1)%120;if(histcount<120)histcount++;}
+static void add_history(void){unsigned long long u,t;double m=read_mem_percent(&u,&t);cpu_hist[histpos]=read_cpu_percent();mem_hist[histpos]=m;sample_core_history();if(page==8){update_gpu();for(int gi=0;gi<ngpus;gi++)gpu_hist[gi][gpuhistpos]=gpus[gi].have_util?gpus[gi].util:0;gpuhistpos=(gpuhistpos+1)%120;if(gpuhistcount<120)gpuhistcount++;}unsigned long long dr=0,dw=0,nrx=0,ntx=0;FILE*f=fopen("/proc/diskstats","r");if(f){char line[512],name[64];unsigned major,minor;unsigned long long rd,wr;while(fgets(line,sizeof line,f)){if(sscanf(line,"%u %u %63s %*u %*u %llu %*u %*u %*u %*u %llu",&major,&minor,name,&rd,&wr)==5){char path[PATH_MAX];snprintf(path,sizeof path,"/sys/block/%s",name);if(access(path,F_OK)==0){dr+=rd*512ULL;dw+=wr*512ULL;}}}fclose(f);}f=fopen("/proc/net/dev","r");if(f){char line[512],name[64];int skip=0;unsigned long long rx,tx;while(fgets(line,sizeof line,f)){if(skip++<2)continue;if(sscanf(line," %63[^:]: %llu %*u %*u %*u %*u %*u %*u %*u %llu",name,&rx,&tx)==3){nrx+=rx;ntx+=tx;}}fclose(f);}if(io_baseline){disk_read_rate=dr>=prev_disk_read?(double)(dr-prev_disk_read):0;disk_write_rate=dw>=prev_disk_write?(double)(dw-prev_disk_write):0;net_rx_rate=nrx>=prev_net_rx?(double)(nrx-prev_net_rx):0;net_tx_rate=ntx>=prev_net_tx?(double)(ntx-prev_net_tx):0;}disk_read_hist[histpos]=disk_read_rate;disk_write_hist[histpos]=disk_write_rate;net_rx_hist[histpos]=net_rx_rate;net_tx_hist[histpos]=net_tx_rate;prev_disk_read=dr;prev_disk_write=dw;prev_net_rx=nrx;prev_net_tx=ntx;io_baseline=1;histpos=(histpos+1)%120;if(histcount<120)histcount++;}
 int main(void){setlocale(LC_CTYPE, "");load_theme();D=XOpenDisplay(NULL);if(!D){fprintf(stderr,"Task Manager requires an X11 display or XWayland.\n");return 1;}S=DefaultScreen(D);W=XCreateSimpleWindow(D,RootWindow(D,S),80,60,SW,SH,1,0xB9C2D0,BG);XStoreName(D,W,"Task Manager");
  XClassHint class_hint; class_hint.res_name=(char*)"taskmgr"; class_hint.res_class=(char*)"TaskManager"; XSetClassHint(D,W,&class_hint);
  XSizeHints size_hints; memset(&size_hints,0,sizeof(size_hints)); size_hints.flags=PMinSize; size_hints.min_width=1000; size_hints.min_height=620; XSetWMNormalHints(D,W,&size_hints);
@@ -797,7 +911,8 @@ int main(void){setlocale(LC_CTYPE, "");load_theme();D=XOpenDisplay(NULL);if(!D){
  Atom net_state=XInternAtom(D,"_NET_WM_STATE",False), max_v=XInternAtom(D,"_NET_WM_STATE_MAXIMIZED_VERT",False), max_h=XInternAtom(D,"_NET_WM_STATE_MAXIMIZED_HORZ",False);
  XEvent maxev; memset(&maxev,0,sizeof(maxev)); maxev.xclient.type=ClientMessage; maxev.xclient.window=W; maxev.xclient.message_type=net_state; maxev.xclient.format=32; maxev.xclient.data.l[0]=1; maxev.xclient.data.l[1]=max_v; maxev.xclient.data.l[2]=max_h; maxev.xclient.data.l[3]=1; XSendEvent(D,RootWindow(D,S),False,SubstructureRedirectMask|SubstructureNotifyMask,&maxev); XFlush(D);
  refresh();add_history();time_t last=time(NULL);for(;;){while(XPending(D)){XEvent e;XNextEvent(D,&e);if(e.type==ClientMessage&&(Atom)e.xclient.data.l[0]==WM_DELETE)goto done;if(e.type==Expose)draw();else if(e.type==ConfigureNotify){ww=e.xconfigure.width;hh=e.xconfigure.height;draw();}else if(e.type==ButtonPress){int x=e.xbutton.x,y=e.xbutton.y;if(run_dialog){int dx=run_dialog_x(),dy=run_dialog_y(),dw=run_dialog_w(),dh=run_dialog_h(),rows=run_dialog_rows(),listtop=dy+158,listbottom=listtop+rows*RUN_ROW_H;if((e.xbutton.button==Button4||e.xbutton.button==Button5)&&x>=dx+24&&x<=dx+dw-24&&y>=listtop&&y<listbottom){run_update_filtered();int maxscroll=run_filtered_count-rows;if(maxscroll<0)maxscroll=0;run_scroll+=(e.xbutton.button==Button4?-1:1);if(run_scroll<0)run_scroll=0;
- if(run_scroll>maxscroll){run_scroll=maxscroll;}if(run_filtered_count>0)run_suggestion=run_filtered[run_scroll];draw();continue;}if(y>=dy+dh-47&&y<=dy+dh-15&&x>=dx+dw-210&&x<=dx+dw-122)launch_command();else if(y>=dy+dh-47&&y<=dy+dh-15&&x>=dx+dw-112&&x<=dx+dw-24){run_dialog=0;run_focus=0;setstatus("Run task cancelled.");}else if(y>=dy+98&&y<=dy+132&&x>=dx+24&&x<=dx+dw-24){run_focus=1;XSetInputFocus(D,W,RevertToParent,CurrentTime);}else if(y>=listtop&&y<listbottom&&x>=dx+24&&x<=dx+dw-24){run_update_filtered();int wanted=(y-listtop)/RUN_ROW_H;if(wanted>=0&&wanted<visible_run_count){run_suggestion=visible_run_suggestions[wanted];snprintf(run_command,sizeof run_command,"%s",run_suggestions[run_suggestion]);run_scroll=0;run_focus=1;XSetInputFocus(D,W,RevertToParent,CurrentTime);}}draw();continue;}if(menu){if(e.xbutton.button==Button1&&x>=menu_x&&x<=menu_x+276&&y>=menu_y&&y<=menu_y+menu_height()){do_menu(y);draw();continue;}menu=0;service_menu=0;startup_menu=0;draw();}if(e.xbutton.button==Button4||e.xbutton.button==Button5){int delta=e.xbutton.button==Button4?-1:1;if(y>165&&y<hh-40){if(page==2){history_scroll+=delta;if(history_scroll<0)history_scroll=0;}else if(page==8){gpu_scroll+=delta;if(gpu_scroll<0)gpu_scroll=0;}else if(page==10){cpu_scroll+=delta;if(cpu_scroll<0)cpu_scroll=0;}else if(page==11){memory_scroll+=delta;if(memory_scroll<0)memory_scroll=0;}else if(page==7){if(y<disk_panel_bottom){disk_scroll+=delta;if(disk_scroll<0)disk_scroll=0;}else{network_scroll+=delta;if(network_scroll<0)network_scroll=0;}}else if(page==0||page==5||page==3||page==6||page==4){scroll+=delta;if(scroll<0)scroll=0;}}draw();continue;}if(e.xbutton.button==Button3&&page==0){int p=row_pick(y);if(p>=0){selected=p;service_menu=0;menu=1;menu_x=x;menu_y=y;draw();}}else if(e.xbutton.button==Button3&&page==6&&x>=NAVW+26&&x<ww-16){services_loaded=0;load_services();int sy=84+54+52-19;int pos=(y-sy)/28+scroll;int idx=service_filtered_index(pos);if(y>=sy&&y<hh-44&&idx>=0&&idx<nservices){selected_service=idx;snprintf(selected_service_unit,sizeof selected_service_unit,"%s",services[idx].unit);service_menu=1;startup_menu=0;menu=1;menu_x=x;menu_y=y;draw();}}else if(e.xbutton.button==Button3&&page==3&&x>=NAVW+26&&x<ww-16){load_startups();int sy=84+54+52-19;int pos=(y-sy)/28+scroll;int idx=startup_filtered_index(pos);if(y>=sy&&y<hh-44&&idx>=0&&idx<nstartups){selected_startup=idx;startup_menu=1;service_menu=0;menu=1;menu_x=x;menu_y=y;draw();}}else if(e.xbutton.button==Button1){
+ if(run_scroll>maxscroll){run_scroll=maxscroll;}if(run_filtered_count>0)run_suggestion=run_filtered[run_scroll];draw();continue;}if(y>=dy+dh-47&&y<=dy+dh-15&&x>=dx+dw-210&&x<=dx+dw-122)launch_command();else if(y>=dy+dh-47&&y<=dy+dh-15&&x>=dx+dw-112&&x<=dx+dw-24){run_dialog=0;run_focus=0;setstatus("Run task cancelled.");}else if(y>=dy+98&&y<=dy+132&&x>=dx+24&&x<=dx+dw-24){run_focus=1;XSetInputFocus(D,W,RevertToParent,CurrentTime);}else if(y>=listtop&&y<listbottom&&x>=dx+24&&x<=dx+dw-24){run_update_filtered();int wanted=(y-listtop)/RUN_ROW_H;if(wanted>=0&&wanted<visible_run_count){run_suggestion=visible_run_suggestions[wanted];snprintf(run_command,sizeof run_command,"%s",run_suggestions[run_suggestion]);run_scroll=0;run_focus=1;XSetInputFocus(D,W,RevertToParent,CurrentTime);}}draw();continue;}if(menu){if(e.xbutton.button==Button1&&x>=menu_x&&x<=menu_x+276&&y>=menu_y&&y<=menu_y+menu_height()){do_menu(y);draw();continue;}menu=0;service_menu=0;startup_menu=0;draw();}if(e.xbutton.button==Button4||e.xbutton.button==Button5){int delta=e.xbutton.button==Button4?-1:1;if(y>165&&y<hh-40){if(page==2){history_scroll+=delta;if(history_scroll<0)history_scroll=0;}else if(page==8){gpu_scroll+=delta;if(gpu_scroll<0)gpu_scroll=0;}else if(page==10){cpu_scroll+=delta;if(cpu_scroll<0)cpu_scroll=0;}else if(page==11){memory_scroll+=delta;if(memory_scroll<0)memory_scroll=0;}else if(page==7){if(x>=NAVW+26&&x<disk_panel_split_x){disk_scroll+=delta;if(disk_scroll<0)disk_scroll=0;}else if(x>=disk_panel_split_x&&x<ww-24){network_scroll+=delta;if(network_scroll<0)network_scroll=0;}}else if(page==0||page==5||page==3||page==6||page==4){scroll+=delta;if(scroll<0)scroll=0;}}draw();continue;}if(e.xbutton.button==Button3&&page==0){int p=row_pick(y);if(p>=0){selected=p;service_menu=0;menu=1;menu_x=x;menu_y=y;draw();}}else if(e.xbutton.button==Button3&&page==6&&x>=NAVW+26&&x<ww-16){services_loaded=0;load_services();int sy=84+54+52-19;int pos=(y-sy)/28+scroll;int idx=service_filtered_index(pos);if(y>=sy&&y<hh-44&&idx>=0&&idx<nservices){selected_service=idx;snprintf(selected_service_unit,sizeof selected_service_unit,"%s",services[idx].unit);service_menu=1;startup_menu=0;menu=1;menu_x=x;menu_y=y;draw();}}else if(e.xbutton.button==Button3&&page==3&&x>=NAVW+26&&x<ww-16){load_startups();int sy=84+54+52-19;int pos=(y-sy)/28+scroll;int idx=startup_filtered_index(pos);if(y>=sy&&y<hh-44&&idx>=0&&idx<nstartups){selected_startup=idx;startup_menu=1;service_menu=0;menu=1;menu_x=x;menu_y=y;draw();}}else if(e.xbutton.button==Button1){
+ if(x>=user_badge_x()&&x<=user_badge_x()+user_badge_width()&&y>=13&&y<=49){pid_t c=fork();if(c==0){execlp("xdg-open","xdg-open","https://github.com/petric-gh/LinuxManager/tree/main",(char*)NULL);_exit(127);}setstatus(c>0?"Opening the LinuxManager GitHub repository.":"Could not open the LinuxManager repository in a browser.");draw();continue;}
  if(page_has_search(page)&&x>=list_search_x()&&x<=ww-24&&y>=70&&y<=100){list_search_focus_page=page;if(x>=ww-24-30&&list_queries[page][0]){list_queries[page][0]=0;reset_search_scroll(page);selected_startup=-1;selected_service=-1;selected_appstat=-1;selected_appstat_name[0]=0;}else XSetInputFocus(D,W,RevertToParent,CurrentTime);setstatus(list_queries[page][0]?"Searching this list…":"Search cleared.");draw();continue;}
  if(page_has_search(page))list_search_focus_page=-1; if(page==0)search_focus=0;
  if(list_search_focus_page>=0&&list_search_focus_page!=page)list_search_focus_page=-1;else if(list_search_focus_page==page)list_search_focus_page=-1;
